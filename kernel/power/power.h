@@ -53,6 +53,8 @@ extern char resume_file[256];
  */
 #define SPARE_PAGES	((1024 * 1024) >> PAGE_SHIFT)
 
+asmlinkage int swsusp_save(void);
+
 /* kernel/power/hibernate.c */
 extern bool freezer_test_done;
 
