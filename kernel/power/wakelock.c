@@ -18,6 +18,8 @@
 #include <linux/rbtree.h>
 #include <linux/slab.h>
 
+#include "power.h"
+
 //<20130327> <marc.huang> add wakelock dubug log
 int wakelock_debug = 1;
 #define _TAG_WAKELOCK "WAKELOCK"
