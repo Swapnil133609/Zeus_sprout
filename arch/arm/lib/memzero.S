@@ -103,7 +103,7 @@ ARM(	lsrs	r4, r4, #1	)
 	/* Early exit for multiple of 4 size. */
 	ands	r1, r1, #3
 	moveq	r0, ip
-	moveq	pc, lr
+	reteq	lr
 
 	/*
 	 * At this point there are 1, 2 or 3 bytes,
@@ -113,11 +113,11 @@ ARM(	lsrs	r4, r4, #1	)
 	strhge	r2, [r0], #2
 	strbne	r2, [r0]
 	mov	r0, ip
-	mov	pc, lr
+	ret	lr
 
 7:	pop	{r4}
 	mov	r0, ip
-	mov	pc, lr
+	ret	lr
 
 8:	cmp	r1, #4
 	blt	9f
@@ -137,5 +137,5 @@ ARM(	lsrs	r4, r4, #1	)
 	addge	r0, r0, #2
 	tst	r1, #1
 	strbne	r2, [r0]
-	mov	pc, lr
+	ret	lr
 ENDPROC(__memzero)
