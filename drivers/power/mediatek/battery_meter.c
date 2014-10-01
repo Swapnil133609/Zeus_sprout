@@ -1390,119 +1390,110 @@ void oam_run(void)
 
 	last_oam_run_time = now_time;
 
-	/* Reconstruct table if temp changed; */
-	fgauge_construct_table_by_temp();
+	gFG_columb = oam_car_2/10;	//mAh
 
-	vol_bat = 15;		/* set avg times */
-	ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE, &vol_bat);
+    if( (oam_i_1 < 0) || (oam_i_2 < 0) )
+        gFG_Is_Charging = KAL_TRUE;
+    else
+        gFG_Is_Charging = KAL_FALSE;
 
-	/* ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &vol_bat_hw_ocv); */
-	/* d_hw_ocv = fgauge_read_d_by_v(vol_bat_hw_ocv); */
+#if 0
+    if(gFG_Is_Charging == KAL_FALSE)
+    {
+        d5_count_time = 60;         
+    }
+    else
+    {
+        charging_current = get_charging_setting_current();    
+        charging_current = charging_current / 100;
+        d5_count_time_rate = (((gFG_BATT_CAPACITY_aging*60*60/100/(charging_current-50))*10)+5)/10;
+        
+        if(d5_count_time_rate < 1)
+            d5_count_time_rate = 1;
 
-	oam_i_1 = (((oam_v_ocv_1 - vol_bat) * 1000) * 10) / oam_r_1;	/* 0.1mA */
-	oam_i_2 = (((oam_v_ocv_2 - vol_bat) * 1000) * 10) / oam_r_2;	/* 0.1mA */
+        d5_count_time = d5_count_time_rate;
+    }
+#else
+    d5_count_time = 60;
+#endif    
 
-	oam_car_1 = (oam_i_1 * delta_time / 3600) + oam_car_1;	/* 0.1mAh */
-	oam_car_2 = (oam_i_2 * delta_time / 3600) + oam_car_2;	/* 0.1mAh */
+    if(d5_count >= d5_count_time)
+    {
+        if(gFG_Is_Charging == KAL_FALSE)
+        {
+            if( oam_d_3 > oam_d_5 )
+            {
+                oam_d_5 = oam_d_5 + 1;
+            }
+            else
+            {                
+                if(oam_d_4 > oam_d_5)
+                {
+                    oam_d_5 = oam_d_5 + 1;
+                }
+            }
+        }
+        else
+        {            
+            if( oam_d_5 > oam_d_3 )
+            {
+                oam_d_5 = oam_d_5 - 1;
+            }
+            else
+            {                
+                if(oam_d_4 < oam_d_5)
+                {
+                    oam_d_5 = oam_d_5 - 1;
+                }
+            }
+        }
+        d5_count = 0;
+        oam_d_3_pre = oam_d_3;
+        oam_d_4_pre = oam_d_4;
+    }
+    else
+    {
+        d5_count = d5_count + 10;
+    }
+    
+  //  bm_print(BM_LOG_CRTI, "[oam_run] %d,%d,%d,%d,%d,%d,%d,%d\n", 
+    //    d5_count, d5_count_time, oam_d_3_pre, oam_d_3, oam_d_4_pre, oam_d_4, oam_d_5, charging_current);    
 
-	oam_d_1 = oam_d0 + (oam_car_1 * 100 / 10) / gFG_BATT_CAPACITY_aging;
-	if (oam_d_1 < 0)
-		oam_d_1 = 0;
-	if (oam_d_1 > 100)
-		oam_d_1 = 100;
+    if(oam_run_i == 0)
+    {
+   //     bm_print(BM_LOG_FULL, "[oam_run] oam_i_1,oam_i_2,oam_car_1,oam_car_2,oam_d_1,oam_d_2,oam_v_ocv_1,oam_d_3,oam_r_1,oam_v_ocv_2,oam_r_2,vol_bat,g_vol_bat_hw_ocv,g_d_hw_ocv\n");
+        oam_run_i=1;
+    }    
 
-	oam_d_2 = oam_d0 + (oam_car_2 * 100 / 10) / gFG_BATT_CAPACITY_aging;
-	if (oam_d_2 < 0)
-		oam_d_2 = 0;
-	if (oam_d_2 > 100)
-		oam_d_2 = 100;
+ //   bm_print(BM_LOG_FULL, "[oam_run] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", 
+   //         oam_i_1,oam_i_2,oam_car_1,oam_car_2,oam_d_1,oam_d_2,oam_v_ocv_1,oam_d_3,oam_r_1,oam_v_ocv_2,oam_r_2,vol_bat,g_vol_bat_hw_ocv,g_d_hw_ocv);    
 
-	oam_v_ocv_1 = vol_bat + mtk_imp_tracking(vol_bat, oam_i_2, 5);
+   // bm_print(BM_LOG_FULL, "[oam_total] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+     //       gFG_capacity_by_c, gFG_capacity_by_v, gfg_percent_check_point,
+       //     oam_d_1, oam_d_2, oam_d_3, oam_d_4, oam_d_5, gFG_capacity_by_c_init, g_d_hw_ocv);
 
-	oam_d_3 = fgauge_read_d_by_v(oam_v_ocv_1);
-	if (oam_d_3 < 0)
-		oam_d_3 = 0;
-	if (oam_d_3 > 100)
-		oam_d_3 = 100;
+    /* bm_print(BM_LOG_CRTI, "[oam_total_s] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+        gFG_capacity_by_c,        // 1
+        gFG_capacity_by_v,        // 2
+        gfg_percent_check_point,  // 3
+        (100-oam_d_1),            // 4
+        (100-oam_d_2),            // 5
+        (100-oam_d_3),            // 6
+        (100-oam_d_4),            // 9
+        (100-oam_d_5),            // 10
+        gFG_capacity_by_c_init,   // 7
+        (100-g_d_hw_ocv)          // 8
+        );          
 
-	oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
-
-	oam_v_ocv_2 = fgauge_read_v_by_d(oam_d_2);
-	oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);
-
-	oam_d_4 = oam_d_3;
-
-	gFG_columb = oam_car_2 / 10;	/* mAh */
-
-	if ((oam_i_1 < 0) || (oam_i_2 < 0))
-		gFG_Is_Charging = KAL_TRUE;
-	else
-		gFG_Is_Charging = KAL_FALSE;
-
-	d5_count_time = 60;
-
-	d5_count = d5_count + delta_time;
-	if (d5_count >= d5_count_time) {
-		if (gFG_Is_Charging == KAL_FALSE) {
-			if (oam_d_3 > oam_d_5) {
-				oam_d_5 = oam_d_5 + 1;
-			} else {
-				if (oam_d_4 > oam_d_5) {
-					oam_d_5 = oam_d_5 + 1;
-				}
-			}
-		} else {
-			if (oam_d_5 > oam_d_3) {
-				oam_d_5 = oam_d_5 - 1;
-			} else {
-				if (oam_d_4 < oam_d_5) {
-					oam_d_5 = oam_d_5 - 1;
-				}
-			}
-		}
-		d5_count = 0;
-		oam_d_3_pre = oam_d_3;
-		oam_d_4_pre = oam_d_4;
-	}
-
-	bm_print(BM_LOG_CRTI, "[oam_run] %d,%d,%d,%d,%d,%d,%d,%d\n",
-		 d5_count, d5_count_time, oam_d_3_pre, oam_d_3, oam_d_4_pre, oam_d_4, oam_d_5,
-		 charging_current);
-
-	if (oam_run_i == 0) {
-		bm_print(BM_LOG_FULL,
-			 "[oam_run] oam_i_1,oam_i_2,oam_car_1,oam_car_2,oam_d_1,oam_d_2,oam_v_ocv_1,oam_d_3,oam_r_1,oam_v_ocv_2,oam_r_2,vol_bat,g_vol_bat_hw_ocv,g_d_hw_ocv\n");
-		oam_run_i = 1;
-	}
-
-	bm_print(BM_LOG_FULL, "[oam_run] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-		 oam_i_1, oam_i_2, oam_car_1, oam_car_2, oam_d_1, oam_d_2, oam_v_ocv_1, oam_d_3,
-		 oam_r_1, oam_v_ocv_2, oam_r_2, vol_bat, g_vol_bat_hw_ocv, g_d_hw_ocv);
-
-	bm_print(BM_LOG_FULL, "[oam_total] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-		 gFG_capacity_by_c, gFG_capacity_by_v, gfg_percent_check_point,
-		 oam_d_1, oam_d_2, oam_d_3, oam_d_4, oam_d_5, gFG_capacity_by_c_init, g_d_hw_ocv);
-
-	bm_print(BM_LOG_CRTI, "[oam_total_s] %d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gFG_capacity_by_c,	/* 1 */
-		 gFG_capacity_by_v,	/* 2 */
-		 gfg_percent_check_point,	/* 3 */
-		 (100 - oam_d_1),	/* 4 */
-		 (100 - oam_d_2),	/* 5 */
-		 (100 - oam_d_3),	/* 6 */
-		 (100 - oam_d_4),	/* 9 */
-		 (100 - oam_d_5),	/* 10 */
-		 gFG_capacity_by_c_init,	/* 7 */
-		 (100 - g_d_hw_ocv)	/* 8 */
-	    );
-
-	bm_print(BM_LOG_FULL, "[oam_total_s_err] %d,%d,%d,%d,%d,%d,%d\n",
-		 (gFG_capacity_by_c - gFG_capacity_by_v),
-		 (gFG_capacity_by_c - gfg_percent_check_point),
-		 (gFG_capacity_by_c - (100 - oam_d_1)),
-		 (gFG_capacity_by_c - (100 - oam_d_2)),
-		 (gFG_capacity_by_c - (100 - oam_d_3)),
-		 (gFG_capacity_by_c - (100 - oam_d_4)), (gFG_capacity_by_c - (100 - oam_d_5))
-	    );
+    bm_print(BM_LOG_FULL, "[oam_total_s_err] %d,%d,%d,%d,%d,%d,%d\n",
+        (gFG_capacity_by_c - gFG_capacity_by_v), 
+        (gFG_capacity_by_c - gfg_percent_check_point),
+        (gFG_capacity_by_c - (100-oam_d_1)), 
+        (gFG_capacity_by_c - (100-oam_d_2)), 
+        (gFG_capacity_by_c - (100-oam_d_3)), 
+        (gFG_capacity_by_c - (100-oam_d_4)), 
+        (gFG_capacity_by_c - (100-oam_d_5))
+        );
 
 	bm_print(BM_LOG_CRTI, "[oam_init_inf] %d, %d, %d, %d, %d, %d\n",
 		 gFG_voltage, (100 - fgauge_read_capacity_by_v(gFG_voltage)), g_rtc_fg_soc,
@@ -1512,8 +1503,8 @@ void oam_run(void)
 		 oam_v_ocv_1, oam_v_ocv_2, vol_bat, oam_i_1, oam_i_2, oam_r_1, oam_r_2, oam_car_1,
 		 oam_car_2, gFG_BATT_CAPACITY_aging, force_get_tbat(), oam_d0);
 
-	bm_print(BM_LOG_CRTI, "[oam_result_inf] %d, %d, %d, %d, %d, %d\n",
-		 oam_d_1, oam_d_2, oam_d_3, oam_d_4, oam_d_5, BMT_status.UI_SOC);
+	  bm_print(BM_LOG_CRTI, "[oam_result_inf] %d, %d, %d, %d, %d, %d\n", 
+           oam_d_1, oam_d_2, oam_d_3, oam_d_4, oam_d_5, BMT_status.UI_SOC);  */
 }
 
 /* ============================================================ // */
