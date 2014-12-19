@@ -1274,7 +1274,7 @@ static int mt_fh_hal_dvfs(enum FH_PLL_ID pll_id, unsigned int dds_value)
 	unsigned int	i=0;
 	unsigned long 	flags=0;
 	unsigned int    ilog =0;
-	FH_MSG("EN: %s:",__func__);
+//	FH_MSG("EN: %s:",__func__);
 
 	local_irq_save(flags);
 	

@@ -1062,7 +1062,7 @@ struct i2c_client *client = bma255_i2c_client;
 
 motion_detect = (int)bma255_get_slope_int_status(client);
 acc_report_motion_detect(motion_detect);
-GSE_LOG("[%s] motion:%d enable:%d power:%d common_use:%d sm_use:%d\n",__func__,motion_detect,enable_status,sensor_power,common_use,sm_use);
+//GSE_LOG("[%s] motion:%d enable:%d power:%d common_use:%d sm_use:%d\n",__func__,motion_detect,enable_status,sensor_power,common_use,sm_use);
 mt_eint_unmask(CUST_EINT_GSE_2_NUM);
 }
 

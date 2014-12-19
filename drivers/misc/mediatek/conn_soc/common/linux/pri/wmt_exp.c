@@ -260,9 +260,9 @@ mtk_wcn_wmt_therm_ctrl (
     pOpData->au4OpData[0] = eType;
     pSignal->timeoutValue = MAX_EACH_WMT_CMD;
 
-    WMT_INFO_FUNC("OPID(%d) type(%d) start\n",
+  /*  WMT_INFO_FUNC("OPID(%d) type(%d) start\n",
             pOp->op.opId,
-            pOp->op.au4OpData[0]);
+            pOp->op.au4OpData[0]); */
 
     if (DISABLE_PSM_MONITOR()) {
         WMT_ERR_FUNC("wake up failed\n");
