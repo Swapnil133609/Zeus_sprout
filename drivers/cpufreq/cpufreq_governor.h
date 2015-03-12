@@ -173,6 +173,8 @@ struct cs_cpu_dbs_info_s {
 	unsigned int down_skip;
 	unsigned int requested_freq;
 	unsigned int enable:1;
+	unsigned int twostep_counter;
+	u64 twostep_time;
 };
 
 struct hp_cpu_dbs_info_s {
@@ -208,6 +210,8 @@ struct cs_dbs_tuners {
 	unsigned int up_threshold;
 	unsigned int down_threshold;
 	unsigned int freq_step;
+	unsigned int input_boost_freq;
+	u64 input_boost_duration;
 };
 
 struct hp_dbs_tuners {
