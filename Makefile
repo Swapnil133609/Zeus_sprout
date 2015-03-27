@@ -378,7 +378,13 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
 		   -Werror=format -Werror=int-to-pointer-cast -Werror=pointer-to-int-cast \
-		   -std=gnu89
+		   -std=gnu89 \
+		   -floop-parallelize-all \
+		   -fgraphite-identity \
+		   -fprefetch-loop-arrays \
+		   -fno-gcse \
+		   --param l1-cache-size=16 --param l1-cache-line-size=32 --param l2-cache-size=1024 \
+		   --param simultaneous-prefetches=8
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
