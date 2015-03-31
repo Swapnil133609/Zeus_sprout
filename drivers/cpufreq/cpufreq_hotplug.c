@@ -389,7 +389,6 @@ void hp_based_cpu_num(int num)
 		dbs_info = &per_cpu(hp_cpu_dbs_info, 0);	/* TODO: FIXME, cpu = 0 */
 		policy = dbs_info->cdbs.cur_policy;
 
-		dbs_freq_increase(policy, policy->max);
 		g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_BASE;
 		/* schedule_delayed_work_on(0, &hp_work, 0); */
 		if (hp_wq == NULL)
@@ -703,7 +702,6 @@ static void hp_check_cpu(int cpu, unsigned int load)
 			    (online_cpus_count * 100 < g_tlp_avg_average) &&
 			    (online_cpus_count < hp_tuners->cpu_num_limit) &&
 			    (online_cpus_count < num_possible_cpus())) {
-				dbs_freq_increase(policy, policy->max);
 				pr_debug("dbs_check_cpu: turn on CPU\n");
 				g_next_hp_action =
 				    g_tlp_avg_average / 100 + (g_tlp_avg_average % 100 ? 1 : 0);
@@ -724,7 +722,6 @@ static void hp_check_cpu(int cpu, unsigned int load)
 
 		if (online_cpus_count < hp_tuners->cpu_num_base
 		    && online_cpus_count < hp_tuners->cpu_num_limit) {
-			dbs_freq_increase(policy, policy->max);
 			pr_debug("dbs_check_cpu: turn on CPU\n");
 			g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_BASE;
 			/* schedule_delayed_work_on(0, &hp_work, 0); */
@@ -737,7 +734,6 @@ static void hp_check_cpu(int cpu, unsigned int load)
 		}
 
 		if (online_cpus_count > hp_tuners->cpu_num_limit) {
-			dbs_freq_increase(policy, policy->max);
 			pr_debug("dbs_check_cpu: turn off CPU\n");
 			g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_LIMIT;
 			/* schedule_delayed_work_on(0, &hp_work, 0); */
@@ -775,7 +771,6 @@ static void hp_check_cpu(int cpu, unsigned int load)
 						pr_debug("dbs_check_cpu: g_cpu_up_sum_load = %d\n",
 							 g_cpu_up_sum_load);
 #endif
-						dbs_freq_increase(policy, policy->max);
 						pr_debug("dbs_check_cpu: turn on CPU\n");
 						g_next_hp_action = online_cpus_count + 1;
 						g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_UP;
@@ -835,7 +830,6 @@ static void hp_check_cpu(int cpu, unsigned int load)
 					pr_debug("dbs_check_cpu: g_cpu_down_sum_load = %d\n",
 						 g_cpu_down_sum_load);
 #endif
-					dbs_freq_increase(policy, policy->max);
 					pr_debug("dbs_check_cpu: turn off CPU\n");
 					g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_DOWN;
 					/* schedule_delayed_work_on(0, &hp_work, 0); */
@@ -1294,9 +1288,6 @@ static ssize_t store_cpu_num_base(struct dbs_data *dbs_data, const char *buf, si
 #ifdef CONFIG_HOTPLUG_CPU
 
 	if (online_cpus_count < input && online_cpus_count < hp_tuners->cpu_num_limit) {
-		struct cpufreq_policy *policy = per_cpu(hp_cpu_dbs_info, 0).cdbs.cur_policy;	/* TODO: FIXME, cpu = 0 */
-
-		dbs_freq_increase(policy, policy->max);
 		g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_BASE;
 		/* schedule_delayed_work_on(0, &hp_work, 0); */
 		if (hp_wq == NULL)
