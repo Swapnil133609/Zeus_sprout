@@ -44,7 +44,6 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 	struct hp_dbs_tuners *hp_tuners = dbs_data->tuners;
 	struct cs_dbs_tuners *cs_tuners = dbs_data->tuners;
 	struct cpufreq_policy *policy;
-	int freq_avg;
 	unsigned int max_load = 0;
 	unsigned int ignore_nice;
 	unsigned int j;
@@ -132,17 +131,6 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 		//pr_emerg("***** cpu: %d, load: %u, g_cpus_sum_load_current: %d, smp_processor_id: %d, num_online_cpus(): %d *****\n", j, load, g_cpus_sum_load_current, smp_processor_id(), num_online_cpus());
 #endif
 		// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-		if (dbs_data->cdata->governor == GOV_ONDEMAND
-		    || dbs_data->cdata->governor == GOV_HOTPLUG // <-XXX
-		   ) {
-			freq_avg = __cpufreq_driver_getavg(policy, j);
-
-			if (freq_avg <= 0)
-				freq_avg = policy->cur;
-
-			load *= freq_avg;
-		}
 
 		if (load > max_load)
 			max_load = load;

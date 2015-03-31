@@ -604,7 +604,7 @@ static void __cpuinit hp_work_handler(struct work_struct *work)
  * Any frequency increase takes it to the maximum frequency. Frequency reduction
  * happens at minimum steps of 5% (default) of current frequency
  */
-static void hp_check_cpu(int cpu, unsigned int load_freq)
+static void hp_check_cpu(int cpu, unsigned int load)
 {
 	struct hp_cpu_dbs_info_s *dbs_info = &per_cpu(hp_cpu_dbs_info, cpu);
 	struct cpufreq_policy *policy = dbs_info->cdbs.cur_policy;
@@ -622,27 +622,16 @@ static void hp_check_cpu(int cpu, unsigned int load_freq)
 	/* pr_emerg("***** cpu: %d, load_freq: %u, smp_processor_id: %d *****\n", cpu, load_freq, smp_processor_id()); */
 
 	/* Check for frequency increase */
-	if (load_freq > hp_tuners->up_threshold * policy->cur) {
+	if (load > hp_tuners->up_threshold) {
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
 			dbs_info->rate_mult = hp_tuners->sampling_down_factor;
 		dbs_freq_increase(policy, policy->max);
 		goto hp_check;	/* <-XXX */
-	}
-
-	/* Check for frequency decrease */
-	/* if we cannot reduce the frequency anymore, break out early */
-	if (policy->cur == policy->min)
-		goto hp_check;	/* <-XXX */
-
-	/*
-	 * The optimal frequency is the frequency that is the lowest that can
-	 * support the current CPU usage without triggering the up policy. To be
-	 * safe, we focus 10 points under the threshold.
-	 */
-	if (load_freq < hp_tuners->adj_up_threshold * policy->cur) {
+	} else {
+		/* Calculate the next frequency proportional to load */
 		unsigned int freq_next;
-		freq_next = load_freq / hp_tuners->adj_up_threshold;
+		freq_next = load * policy->cpuinfo.max_freq / 100;
 
 		/* No longer fully busy, reset rate_mult */
 		dbs_info->rate_mult = 1;
