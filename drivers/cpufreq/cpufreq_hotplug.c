@@ -389,12 +389,6 @@ void hp_based_cpu_num(int num)
 #ifdef CONFIG_HOTPLUG_CPU
 
 	if (online_cpus_count < num && online_cpus_count < hp_tuners->cpu_num_limit) {
-		struct hp_cpu_dbs_info_s *dbs_info;
-		struct cpufreq_policy *policy;
-
-		dbs_info = &per_cpu(hp_cpu_dbs_info, 0);	/* TODO: FIXME, cpu = 0 */
-		policy = dbs_info->cdbs.cur_policy;
-
 		g_trigger_hp_work = CPU_HOTPLUG_WORK_TYPE_BASE;
 		/* schedule_delayed_work_on(0, &hp_work, 0); */
 		if (hp_wq == NULL)
@@ -1564,30 +1558,6 @@ static struct attribute_group hp_attr_group_gov_pol = {
 
 #ifdef CONFIG_HOTPLUG_CPU
 
-static struct task_struct *freq_up_task;
-
-static int touch_freq_up_task(void *data)
-{
-	struct cpufreq_policy *policy;
-
-	while (1) {
-		policy = cpufreq_cpu_get(0);
-		if (policy->cur < 747500)
-			dbs_freq_increase(policy, 747500);
-		cpufreq_cpu_put(policy);
-		/* mt_cpufreq_set_ramp_down_count_const(0, 100); */
-		pr_debug("@%s():%d\n", __func__, __LINE__);
-
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule();
-
-		if (kthread_should_stop())
-			break;
-	}
-
-	return 0;
-}
-
 static void dbs_input_event(struct input_handle *handle, unsigned int type,
 			    unsigned int code, int value)
 {
@@ -1628,9 +1598,6 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 			else
 				queue_delayed_work_on(0, hp_wq, &hp_work, 0);
 		}
-
-		if (online_cpus_count <= hp_tuners->cpu_input_boost_num && online_cpus_count <= hp_tuners->cpu_num_limit)
-			wake_up_process(freq_up_task);
 
 		/* } */
 	}
@@ -1953,25 +1920,12 @@ struct cpufreq_governor cpufreq_gov_hotplug = {
 
 static int __init cpufreq_gov_dbs_init(void)
 {
-	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
-
-	freq_up_task = kthread_create(touch_freq_up_task, NULL, "touch_freq_up_task");
-
-	if (IS_ERR(freq_up_task))
-		return PTR_ERR(freq_up_task);
-
-	sched_setscheduler_nocheck(freq_up_task, SCHED_FIFO, &param);
-	get_task_struct(freq_up_task);
-
 	return cpufreq_register_governor(&cpufreq_gov_hotplug);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
 	cpufreq_unregister_governor(&cpufreq_gov_hotplug);
-
-	kthread_stop(freq_up_task);
-	put_task_struct(freq_up_task);
 }
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");

@@ -141,7 +141,7 @@ static struct early_suspend mt_cpufreq_early_suspend_handler =
 /***********************************************
 * RMAP DOWN TIMES to postpone frequency degrade
 ************************************************/
-#define RAMP_DOWN_TIMES (2)
+#define RAMP_DOWN_TIMES (0)
 
 /**********************************
 * Available Clock Source for CPU
