@@ -339,10 +339,10 @@ static void mlog_meminfo(void)
 
 	memfree = P2K(global_page_state(NR_FREE_PAGES) + mtkpasr_show_page_reserved());
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0))
-	swapfree = P2K(atomic_long_read(&nr_swap_pages));
+	swapfree = P2K(get_nr_swap_pages());
 	cached = P2K(global_page_state(NR_FILE_PAGES) - total_swapcache_pages());
 #else
-	swapfree = P2K(nr_swap_pages);
+	swapfree = P2K(get_nr_swap_pages());
 	cached = P2K(global_page_state(NR_FILE_PAGES) - total_swapcache_pages);
 #endif
 
