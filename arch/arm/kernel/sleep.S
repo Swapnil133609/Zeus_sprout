@@ -115,7 +115,7 @@ cpu_logical_index:
 1:
 	ldr	r2, [r3, r1, lsl #2]
 	cmp	r2, r0
-	moveq	pc, lr
+	reteq	lr
 	add	r1, r1, #1
 	b	1b
 

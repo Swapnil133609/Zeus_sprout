@@ -12,6 +12,7 @@
 * If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <asm/assembler.h>
 #include <asm/memory.h>
 #include <mach/mt_reg_base.h>
 
@@ -2197,7 +2198,7 @@ L_CPU_FINAL:
         
         mcr     p15,0,r2,c1,c0,0    @ SCTLR - System Control Register 
 
-        mov     pc, lr
+        ret     lr
         isb
         nop
         nop
