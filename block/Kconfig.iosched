@@ -20,22 +20,6 @@ config IOSCHED_DEADLINE
 	  CSCAN service with FIFO expiration of requests, switching to
 	  a new point in the service tree and doing a batch of IO from there
 	  in case of expiry.
-	  
-config IOSCHED_SIO
-	tristate "Simple I/O scheduler"
-	default y
-
-config IOSCHED_ROW
-        tristate "ROW I/O scheduler"
-        default y
-
-config IOSCHED_VR
-	tristate "VR I/O scheduler"
-	default y
-
-config IOSCHED_ZEN
-        tristate "ZEN I/O scheduler"
-        default y
 
 config IOSCHED_CFQ
 	tristate "CFQ I/O scheduler"
@@ -70,18 +54,6 @@ choice
 
 	config DEFAULT_NOOP
 		bool "No-op"
-		
-	config DEFAULT_SIO
-		bool "SIO" if IOSCHED_SIO=y
-
-	config DEFAULT_ROW
-		bool "ROW" if IOSCHED_ROW=y
-
-	config DEFAULT_VR
-		bool "VR" if IOSCHED_VR=y
-
-	config DEFAULT_ZEN
-		bool "ZEN" if IOSCHED_ZEN=y	
 
 endchoice
 
@@ -90,10 +62,6 @@ config DEFAULT_IOSCHED
 	default "deadline" if DEFAULT_DEADLINE
 	default "cfq" if DEFAULT_CFQ
 	default "noop" if DEFAULT_NOOP
-	default "sio" if DEFAULT_SIO
-        default "row" if DEFAULT_ROW 
-        default "vr" if DEFAULT_VR
-        default "zen" if DEFAULT_ZEN
 
 endmenu
 
