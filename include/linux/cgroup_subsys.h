@@ -73,7 +73,6 @@ SUBSYS(net_prio)
 
 /* */
 
-<<<<<<< HEAD
 #if IS_SUBSYS_ENABLED(CONFIG_CGROUP_HUGETLB)
 SUBSYS(hugetlb)
 #endif
@@ -82,10 +81,6 @@ SUBSYS(hugetlb)
 
 #ifdef CONFIG_CGROUP_BCACHE
 SUBSYS(bcache)
-=======
-#ifdef CONFIG_CGROUP_BFQIO
-SUBSYS(bfqio)
->>>>>>> 5235fe5... block: cgroups, kconfig, build bits for BFQ-v6r2 for 3.4
 #endif
 
 /* */
