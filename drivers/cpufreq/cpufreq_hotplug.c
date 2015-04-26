@@ -154,7 +154,6 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq);
 extern unsigned int mt_cpufreq_thermal_test_limited_load(void);
 #endif
 
-static unsigned int dbs_ignore = 1;
 static unsigned int dbs_thermal_limited;
 static unsigned int dbs_thermal_limited_freq;
 
@@ -281,16 +280,6 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 	if (hp_tuners->powersave_bias)
 		freq = hp_ops.powersave_bias_target(p, freq, CPUFREQ_RELATION_H);
 	else if (p->cur == p->max) {
-/* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
-		if (dbs_ignore == 0) {
-			if ((dbs_thermal_limited == 1) && (freq > dbs_thermal_limited_freq)) {
-				freq = dbs_thermal_limited_freq;
-				pr_debug("[dbs_freq_increase] thermal limit freq = %d\n", freq);
-			}
-
-			dbs_ignore = 1;
-		} else
-/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 			return;
 	}
 
