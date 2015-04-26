@@ -560,7 +560,6 @@ static void __cpuinit hp_work_handler(struct work_struct *work)
 			}
 
 			hp_reset_strategy();
-			dbs_ignore = 0;	/* force trigger frequency scaling */
 
 			pr_debug("[power/hotplug] hp_work_handler end\n");
 
@@ -609,6 +608,7 @@ static void __cpuinit hp_work_handler(struct work_struct *work)
  */
 static void hp_check_cpu(int cpu, unsigned int load)
 {
+	unsigned int freq_next;
 	struct hp_cpu_dbs_info_s *dbs_info = &per_cpu(hp_cpu_dbs_info, cpu);
 	struct cpufreq_policy *policy = dbs_info->cdbs.cur_policy;
 	struct dbs_data *dbs_data = policy->governor_data;
@@ -625,19 +625,20 @@ static void hp_check_cpu(int cpu, unsigned int load)
 	/* pr_emerg("***** cpu: %d, load_freq: %u, smp_processor_id: %d *****\n", cpu, load_freq, smp_processor_id()); */
 
 	/* Check for frequency increase */
-	if (load > hp_tuners->up_threshold) {
+	if (load > 80) {
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
 			dbs_info->rate_mult = hp_tuners->sampling_down_factor;
 		dbs_freq_increase(policy, policy->max);
-		goto hp_check;	/* <-XXX */
 	} else {
-		/* Calculate the next frequency proportional to load */
-		unsigned int freq_next, min_f, max_f;
-
-		min_f = policy->cpuinfo.min_freq;
-		max_f = policy->cpuinfo.max_freq;
-		freq_next = min_f + load * (max_f - min_f) / 100;
+		if (load > 60)
+			freq_next = 1196000;
+		else if (load > 40)
+			freq_next = 1040000;
+		else if (load > 20)
+			freq_next = 747500;
+		else
+			freq_next = policy->min;
 
 		/* No longer fully busy, reset rate_mult */
 		dbs_info->rate_mult = 1;
@@ -651,7 +652,7 @@ static void hp_check_cpu(int cpu, unsigned int load)
 		}
 	}
 /* <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< */
- hp_check:{
+ {
 #ifdef CONFIG_HOTPLUG_CPU
 		long cpus_sum_load_last_up = 0;
 		long cpus_sum_load_last_down = 0;
