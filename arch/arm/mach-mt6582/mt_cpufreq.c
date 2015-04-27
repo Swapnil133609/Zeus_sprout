@@ -51,7 +51,7 @@
 * If MT6333 supported, VPROC could support lower than 1.15V
 * CONFIG_MTK_DVFS_DISABLE_LOW_VOLTAGE_SUPPORT only for phone_v1
 ***************************************************/
-#if defined(CONFIG_IS_VCORE_USE_6333VCORE) && !defined(CONFIG_MTK_DVFS_DISABLE_LOW_VOLTAGE_SUPPORT)
+#if defined(CONFIG_MTK_DVFS_DISABLE_LOW_VOLTAGE_SUPPORT)
 #define MT_DVFS_LOW_VOLTAGE_SUPPORT
 #endif
 

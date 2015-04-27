@@ -46,7 +46,7 @@
 #ifdef CONFIG_IS_VCORE_USE_6333VCORE
 #define SPM_CTRL_33VCORE        1
 #else
-#define SPM_CTRL_33VCORE        0
+#define SPM_CTRL_33VCORE        1
 #endif
 
 #ifdef CONFIG_IS_VRF18_USE_6333VRF18
