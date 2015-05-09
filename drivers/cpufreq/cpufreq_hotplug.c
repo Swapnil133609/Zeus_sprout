@@ -614,17 +614,17 @@ static void hp_check_cpu(int cpu, unsigned int load)
 	/* pr_emerg("***** cpu: %d, load_freq: %u, smp_processor_id: %d *****\n", cpu, load_freq, smp_processor_id()); */
 
 	/* Check for frequency increase */
-	if (load > 80) {
+	if (load > 90) {
 		/* If switching to max speed, apply sampling_down_factor */
 		if (policy->cur < policy->max)
 			dbs_info->rate_mult = hp_tuners->sampling_down_factor;
 		dbs_freq_increase(policy, policy->max);
 	} else {
-		if (load > 60)
+		if (load > 70)
 			freq_next = 1196000;
-		else if (load > 40)
+		else if (load > 50)
 			freq_next = 1040000;
-		else if (load > 20)
+		else if (load > 30)
 			freq_next = 747500;
 		else
 			freq_next = policy->min;
