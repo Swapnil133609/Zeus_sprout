@@ -43,7 +43,8 @@ compile_kernel ()
 echo -e "$White***********************************************"
 echo "         Compiling BlackBox kernel             "
 echo -e "***********************************************$nocol"
-make $codename$_defconfig
+make sprout_defconfig
+make menuconfig
 make
 if ! [ -a $ZIMAGE ];
 then
