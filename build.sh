@@ -1,7 +1,7 @@
 #
-# Copyright © 2015, Kunal Kene "kunalkene1797" <kunalkene1797@gmail.com>
+# Copyright © 2015, Swapnil Solanki "Swapnil133609" <swapnil133609@gmail.com>
 #
-# Custom build script for BlackBox Kernel's
+# Custom build script for Zeus Kernel
 #
 # This software is licensed under the terms of the GNU General Public
 # License version 2, as published by the Free Software Foundation, and
@@ -33,15 +33,15 @@ nocol='\033[0m'         # Default
 # Tweakable Options Below
 export ARCH=arm
 export SUBARCH=arm
-export KBUILD_BUILD_USER="kunalkene1797"
-export KBUILD_BUILD_HOST="Perilous-Beast"
-export CROSS_COMPILE=~/4.9.3-a7/bin/arm-cortex_a7-linux-gnueabihf-
+export KBUILD_BUILD_USER="Swapnil"
+export KBUILD_BUILD_HOST="Mad-Monster"
+export CROSS_COMPILE=/home/swapnil/toolchain/arm-cortex-a7/bin/arm-cortex_a7-linux-gnueabihf-
 
 # Compilation Scripts Are Below
 compile_kernel ()
 {
 echo -e "$White***********************************************"
-echo "         Compiling BlackBox kernel             "
+echo "         Compiling Zeus kernel             "
 echo -e "***********************************************$nocol"
 make sprout_defconfig
 make menuconfig
@@ -56,7 +56,7 @@ fi
 # Finalizing Script Below
 case $1 in
 clean)
-make ARCH=arm -j8 clean mrproper
+make ARCH=arm -j3 clean mrproper
 rm -rf include/linux/autoconf.h
 ;;
 *)
