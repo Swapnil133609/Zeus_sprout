@@ -273,12 +273,6 @@ ret = DECOMPRESS(cmem, zram->table[index].size,
 	flush_dcache_page(page);
 	ret = 0;
 out_cleanup:
-
-*/
-        COMPRESS(uncmem, PAGE_SIZE, src, &clen,
-                               zram->compress_workmem);
-        ret = 0;
-        
 	kunmap_atomic(user_mem);
 	if (is_partial_io(bvec))
 		kfree(uncmem);
