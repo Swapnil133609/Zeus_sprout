@@ -58,7 +58,7 @@ int s2w_st_flag = 0;
 int doubletap2wake = 1;
 int dt2w_switch_temp = 1;
 int dt2w_changed = 0;
-bool scr_suspended = false, exec_count = true;
+bool scr_suspended = false, exec_count = true, irq_wake = false;
 bool scr_on_touch = false, barrier[2] = {false, false};
 static struct input_dev * sweep2wake_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
