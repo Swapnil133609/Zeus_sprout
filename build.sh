@@ -45,7 +45,7 @@ echo -e "$White***********************************************"
 echo "         Compiling Zeus kernel             "
 echo -e "***********************************************$nocol"
 make sprout_zeus_defconfig
-make
+make -j3
 if ! [ -a $ZIMAGE ];
 then
 echo -e "$Red Kernel Compilation failed! Fix the errors! $nocol"
