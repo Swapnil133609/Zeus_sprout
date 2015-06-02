@@ -147,7 +147,6 @@ struct tpd_debug {
 #ifdef USE_THREAD_HANDLER
 struct task_struct *thread = NULL;
 static int tpd_flag = 0;
-int s2w_st_flag=0;
 static DECLARE_WAIT_QUEUE_HEAD(waiter);
 #endif
 struct point G_point[10];
@@ -1355,7 +1354,6 @@ static void tpd_down(int x, int y, int p,int id)
     input_mt_sync(tpd->dev);
 //printk("[SWEEP2WAKE]: inside tpd up\n");
 #ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-int s2w_st_flag = 0;
 				if (sweep2wake > 0) {
 					//printk("[SWEEP2WAKE]:line : %d | func : %s\n", __LINE__, __func__);
 //printk("[SWEEP2WAKE]: resetin s2w param\n");
@@ -1858,7 +1856,6 @@ static int tpd_probe(struct i2c_client *client, const struct i2c_device_id *id)
     u8 status = 0;
     int retval;
     int i;
-    int s2w_st_flag = cinfo.count;
     u16 TP_Max_X =0;
     u16 TP_Max_Y =0;
     u16 tp_x_for_lcd=0;
@@ -2062,7 +2059,7 @@ static void tpd_suspend(struct early_suspend *h) {
 //printk("[SWEEP2WAKE]: early suspernd\n");
 	if (sweep2wake == 0 && doubletap2wake == 0)
 #endif
-	{
+
     TPD_DEBUG("TPD enter sleep\n");
     if(atomic_read(&Firmware_Update_Flag))
     {
