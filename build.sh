@@ -44,7 +44,8 @@ compile_kernel ()
 echo -e "$White***********************************************"
 echo "         Compiling Zeus kernel             "
 echo -e "***********************************************$nocol"
-make sprout_zeus_defconfig
+make clean && make mrproper
+make sprout_defconfig
 make -j3
 if ! [ -a $ZIMAGE ];
 then
