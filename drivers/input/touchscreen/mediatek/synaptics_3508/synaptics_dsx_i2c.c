@@ -21,7 +21,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -1431,33 +1430,6 @@ static int touch_event_handler(void *data)
 	return 0;
 }
 
-static int synaptics_rmi4_proc_sweep_wake_read(char *page, char **start, off_t off,
-		int count, int *eof, void *data)
-{
-	return sprintf(page, "%d\n", atomic_read(&rmi4_data->sweep_wake_enable) ? 1 : 0);
-}
-
-static int synaptics_rmi4_proc_sweep_wake_write(struct file *filp, const char __user *buff,
-		unsigned long len, void *data)
-{
-	int enable;
-	char buf[2];
-
-	if (len > 2)
-		return 0;
-
-	if (copy_from_user(buf, buff, len)) {
-		print_ts(TS_DEBUG, KERN_ERR "Read proc input error.\n");
-		return -EFAULT;
-	}
-
-	enable = (buf[0] == '0') ? 0 : 1;
-
-	atomic_set(&rmi4_data->sweep_wake_enable, 0);
-
-	return len;
-}
-
  /**
  * synaptics_rmi4_irq_enable()
  *
@@ -2467,7 +2439,6 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 
 	set_bit(EV_SYN, rmi4_data->input_dev->evbit);
 	set_bit(EV_KEY, rmi4_data->input_dev->evbit);
-        set_bit(SWEEP_WAKE_KEY, rmi4_data->input_dev->keybit);
 	set_bit(EV_ABS, rmi4_data->input_dev->evbit);
 	set_bit(BTN_TOUCH, rmi4_data->input_dev->keybit);
 	set_bit(BTN_TOOL_FINGER, rmi4_data->input_dev->keybit);
@@ -3316,13 +3287,6 @@ printk("[s3508]synaptics_rmi4_init\n");
 printk("[s3508]synaptics_rmi4_init_end\n");
 	return 0;
 }
-
-	// sweep wake
-	proc_entry = create_proc_entry("sweep_wake_enable", 0664, procdir);
-	if (proc_entry) {
-		proc_entry->write_proc = synaptics_rmi4_proc_sweep_wake_write;
-		proc_entry->read_proc = synaptics_rmi4_proc_sweep_wake_read;
-	}
 
  /**
  * synaptics_rmi4_exit()
