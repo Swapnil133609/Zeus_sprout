@@ -32,25 +32,28 @@
 #include <linux/input/sweep2wake.h>
 
 /* Tuneables */
-#define DEBUG                   1
-#define S2W_PWRKEY_DUR          60
 
-#ifdef CONFIG_MACH_MT6582_SPROUT
-/* Sprout aka Android One */
-#define S2W_Y_MAX                       900
-#define S2W_X_MAX                       450
-#define S2W_Y_LIMIT                     S2W_Y_MAX-900
-#define S2W_X_B1                        40
-#define S2W_X_B2                        100
-#define S2W_X_FINAL                     40
-#else
-/* defaults */
+#ifdef HAVE_TOUCH_KEY
+const u16 touch_key_array[] = { KEY_BACK, KEY_HOMEPAGE, KEY_MENU};
+#define MAX_KEY_NUM ( sizeof( touch_key_array )/sizeof( touch_key_array[0] ) )
+#endif
+
+#define TPD_B1_FP    40    //35        //Button 1 pad space
+#define TPD_B1_W    100    //50        //Button 1 Width
+#define TPD_B2_FP    40    //50        //Button 2 pad space
+#define TPD_B2_W    100    //50        //Button 2 Width
+#define TPD_B3_FP    40    //50        //Button 3 pad space
+#define TPD_B3_W    100    //50        //Button 3 Width
+#define DEBUG                   1
 #define DEFAULT_S2W_Y_LIMIT             854
-#define DEFAULT_S2W_X_MAX               450
+#define DEFAULT_S2W_X_MAX               480
 #define DEFAULT_S2W_X_B1                40
 #define DEFAULT_S2W_X_B2                100
-#define DEFAULT_S2W_X_FINAL             40
-#endif
+#define DEFAULT_S2W_X_FINAL             50
+#define DEFAULT_S2W_PWRKEY_DUR          60
+
+/* external function from the ts driver */
+bool is_single_touch(void);
 
 /* Resources */
 int sweep2wake = 2;
@@ -58,17 +61,17 @@ int s2w_st_flag = 0;
 int doubletap2wake = 1;
 int dt2w_switch_temp = 1;
 int dt2w_changed = 0;
-bool scr_suspended = false, exec_count = true, irq_wake = false;
+bool scr_suspended = false, exec_count = true;
 bool scr_on_touch = false, barrier[2] = {false, false};
 static struct input_dev * sweep2wake_pwrdev;
 static DEFINE_MUTEX(pwrkeyworklock);
 
-static int s2w_start_posn = DEFAULT_S2W_X_B1;
-static int s2w_mid_posn = DEFAULT_S2W_X_B2;
+static int s2w_start_posn = TPD_B1_W;
+static int s2w_mid_posn = TPD_B2_W;
 static int s2w_end_posn = (DEFAULT_S2W_X_MAX - DEFAULT_S2W_X_FINAL);
 static int s2w_height_adjust = 854;
 static int s2w_threshold = DEFAULT_S2W_X_FINAL;
-//static int s2w_max_posn = DEFAULT_S2W_X_MAX;
+static int s2w_max_posn = DEFAULT_S2W_X_MAX;
 
 static int s2w_swap_coord = 0;
 
@@ -218,7 +221,7 @@ void detect_sweep2wake(int sweep_coord, int sweep_height, unsigned long time, in
         if (sweep_coord > 400) {
             tripoff = 1;
             triptime = time;
-        } else if (tripoff == 1 && sweep_coord < 400 && time - triptime < 25) {
+        } else if (tripoff == 1 && sweep_coord < 480 && time - triptime < 25) {
             tripoff = 2;
         } else if (tripoff == 2 && sweep_coord < 300 && time - triptime < 50) {
             tripoff = 3;
@@ -243,7 +246,7 @@ void doubletap2wake_func(int x, int y, unsigned long time)
 	if (!initial_time)
 		initial_time = time;	
 
-	if (time - initial_time > 800)
+	if (time - initial_time > 854)
 		reset_sweep2wake();
 printk("[SWEEP2WAKE]: d2w reset\n");
 	
@@ -514,4 +517,5 @@ module_exit(sweep2wake_exit);
 
 MODULE_DESCRIPTION("Sweep2wake");
 MODULE_LICENSE("GPLv2");
+
 

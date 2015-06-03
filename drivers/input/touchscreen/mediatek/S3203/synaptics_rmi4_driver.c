@@ -2028,12 +2028,6 @@ static int tpd_local_init(void)
 
 extern atomic_t Firmware_Update_Flag;
 
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-	else if (sweep2wake > 0 || doubletap2wake > 0)
-	mt65xx_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
-#endif
-
-
 static void tpd_resume(struct early_suspend *h)
 {
     TPD_DEBUG("TPD wake up\n");

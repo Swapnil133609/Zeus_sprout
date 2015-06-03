@@ -26,7 +26,6 @@
 #include <linux/hrtimer.h>
 
 extern int sweep2wake;
-extern int s2w_st_flag;
 extern int doubletap2wake;
 extern bool scr_suspended;
 extern bool scr_on_touch;
@@ -47,3 +46,4 @@ extern void doubletap2wake_func(int, int, unsigned long);
 extern void sweep2wake_setdev(struct input_dev *);
 
 #endif	/* _LINUX_SWEEP2WAKE_H */
+

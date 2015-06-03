@@ -29,6 +29,10 @@
 #include <mach/mt_typedefs.h>
 #include <mach/mt_boot.h>
 
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+
 #include "cust_gpio_usage.h"
 
 #include <linux/dma-mapping.h>
@@ -309,7 +313,7 @@ static int HalTscrCDevWriteI2CSeq(u8 addr, u8* data, u16 size)
 	}
     return ret;
 }
-#if 1//adair:以下无需修改
+#if 1//adair:\D2\D4\CF\C2\CE\DE\D0\E8\D0薷\C4
 /*
 static void Get_Chip_Version(void)
 {
@@ -2286,6 +2290,7 @@ static ssize_t firmware_data_store(struct device *dev,
                                    struct device_attribute *attr, const char *buf, size_t size)
 {
     int i;
+
 	TP_DEBUG_ERR("***FwDataCnt = %d ***\n", FwDataCnt);
    // for (i = 0; i < 1024; i++)
     {
@@ -2296,7 +2301,7 @@ static ssize_t firmware_data_store(struct device *dev,
 }
 static DEVICE_ATTR(data, CTP_AUTHORITY, firmware_data_show, firmware_data_store);
 
-#endif//adair:以上无需修改
+#endif//adair:\D2\D4\C9\CF\CE\DE\D0\E8\D0薷\C4
 
 //end for update firmware
 
@@ -2682,7 +2687,13 @@ static  void tpd_down(int x, int y)
     input_report_abs(tpd->dev, ABS_MT_POSITION_Y, y);
     input_mt_sync(tpd->dev);
     SSL_PRINT("MSG2133 D[%4d %4d %4d] ", x, y,1);
-
+//printk("[SWEEP2WAKE]: tpd down\n");
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+		if (sweep2wake) {
+//printk("[SWEEP2WAKE]: detecting sweep\n");
+			detect_sweep2wake(x, y, jiffies, id);
+		}
+#endif
    //add by lisong for cit test
    if (FACTORY_BOOT == get_boot_mode())
    {   
@@ -3241,8 +3252,10 @@ static int __devinit tpd_probe(struct i2c_client *client, const struct i2c_devic
     mt65xx_eint_set_hw_debounce(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_CN);
     mt65xx_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_EN, CUST_EINT_TOUCH_PANEL_POLARITY, tpd_eint_interrupt_handler, 1);
     mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+    (sweep2wake > 0 || doubletap2wake > 0)
 #else
    mt_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_TYPE, tpd_eint_interrupt_handler, 1);
+   mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
 
 #endif
     msleep(100);

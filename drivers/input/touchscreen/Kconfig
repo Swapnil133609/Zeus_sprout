@@ -935,4 +935,17 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
+config TOUCHSCREEN_SWEEP2WAKE
+       tristate "Sweep2Wake for touchscreens"
+       select TOUCHSCREEN_SWEEP2WAKE_PREVENT_SLEEP
+       default y
+
+
+config TOUCHSCREEN_SWEEP2WAKE_PREVENT_SLEEP
+       bool "Inihibit sleep on modified touchscreen drivers"
+       default y
+       help
+         This allows sweep2wake to disable the sleep function of modified
+         touchscreen drivers.
+
 endif

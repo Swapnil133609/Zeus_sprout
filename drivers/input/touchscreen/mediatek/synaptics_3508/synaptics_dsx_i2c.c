@@ -36,6 +36,11 @@
 #include <mach/mt_pm_ldo.h>
 #include <mach/mt_typedefs.h>
 #include <mach/mt_boot.h>
+
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+
 #include "cust_gpio_usage.h"
 #include "tpd.h"
 
@@ -926,7 +931,26 @@ printk("[s3508_11]finger = %d\n",finger);
 #ifndef TYPE_B_PROTOCOL
 			input_mt_sync(rmi4_data->input_dev);
 #endif
+//printk("[SWEEP2WAKE]: inside tpd up\n");
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
 
+				if (sweep2wake > 0) {
+					//printk("[SWEEP2WAKE]:line : %d | func : %s\n", __LINE__, __func__);
+//printk("[SWEEP2WAKE]: resetin s2w param\n");
+					//printk("[SWEEP2WAKE]:line : %d | func : %s\n", __LINE__, __func__);
+					exec_count = true;
+					barrier[0] = false;
+					barrier[1] = false;
+					scr_on_touch = false;
+					tripoff = 0;
+					tripon = 0;
+					triptime = 0;
+				}
+				if (doubletap2wake && scr_suspended) {
+//printk("[SWEEP2WAKE]: detecting d2w\n");
+					doubletap2wake_func(x, y, jiffies);
+				}
+#endif
         if(touch_ssb_data.use_tpd_button == 1){
 			if (NORMAL_BOOT != boot_mode)
 			{   
@@ -1455,6 +1479,9 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 			mt_set_gpio_pull_select(GPIO_CTP_EINT_PIN, GPIO_PULL_UP);
 			rmi4_data->irq_enabled = false;
 		}
+                 if (sweep2wake > 0 || doubletap2wake > 0) {
+                    mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+                 }
 	}
 
 	return retval;
