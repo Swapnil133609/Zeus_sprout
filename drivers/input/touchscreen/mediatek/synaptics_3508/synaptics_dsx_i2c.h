@@ -229,6 +229,7 @@ struct synaptics_rmi4_data {
 	unsigned char num_of_fingers;
 	unsigned char max_touch_width;
 	unsigned char report_enable;
+        unsigned char sweep_wake_enable;
 	unsigned char no_sleep_setting;
 	unsigned char intr_mask[MAX_INTR_REGISTERS];
 	unsigned char *button_txrx_mapping;
