@@ -40,7 +40,6 @@ obj-$(CONFIG_TOUCHSCREEN_MCS5000)	+= mcs5000_ts.o
 obj-$(CONFIG_TOUCHSCREEN_MTK)		+= mediatek/
 obj-$(CONFIG_TOUCHSCREEN_SWEEP2WAKE)	+= sweep2wake.o
 obj-$(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)	+= doubletap2wake.o
-obj-$(CONFIG_TOUCHSCREEN_PREVENT_SLEEP)	+= wake_helpers.o
 obj-$(CONFIG_TOUCHSCREEN_MIGOR)		+= migor_ts.o
 obj-$(CONFIG_TOUCHSCREEN_MMS114)	+= mms114.o
 obj-$(CONFIG_TOUCHSCREEN_MTOUCH)	+= mtouch.o
