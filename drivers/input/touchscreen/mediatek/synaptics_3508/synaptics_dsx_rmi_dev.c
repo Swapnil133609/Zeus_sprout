@@ -36,6 +36,15 @@
 #include "cust_gpio_usage.h"
 #include <mach/mt_gpio.h>
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
+#endif
+
 #define CHAR_DEVICE_NAME "rmi"
 #define DEVICE_CLASS_NAME "rmidev"
 #define SYSFS_FOLDER_NAME "rmidev"
@@ -123,7 +132,23 @@ static int rmidev_sysfs_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 	int retval = 0;
 	unsigned char intr_status[MAX_INTR_REGISTERS];
 	unsigned long irq_flags = IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+	prevent_sleep = (s2w_switch > 0) && (s2w_s2sonly == 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (prevent_sleep) {
+		enable_irq_wake(rmi4_data->irq_enable);
+	} else {
+#endif
 	if (enable) {
 		if (rmidev->irq_enabled)
 			return retval;
@@ -154,7 +179,9 @@ static int rmidev_sysfs_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 			rmidev->irq_enabled = false;
 		}
 	}
-
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	} //prevent_sleep
+#endif
 	return retval;
 }
 
@@ -195,6 +222,21 @@ static ssize_t rmidev_sysfs_data_store(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
 		char *buf, loff_t pos, size_t count)
 {
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+	prevent_sleep = (s2w_switch > 0) && (s2w_s2sonly == 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+
+#endif
 	int retval;
 	unsigned int length = (unsigned int)count;
 	unsigned short address = (unsigned short)pos;
@@ -222,7 +264,9 @@ static ssize_t rmidev_sysfs_data_store(struct file *data_file,
 	}
 
 	return length;
-}
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+       }
+#endif
 
 static ssize_t rmidev_sysfs_open_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
@@ -304,6 +348,24 @@ static loff_t rmidev_llseek(struct file *filp, loff_t off, int whence)
 		return -EBADF;
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+	prevent_sleep = (s2w_switch > 0) && (s2w_s2sonly == 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (prevent_sleep) {
+		enable_irq_wake(rmidev->fn_ptr->enable);
+	} else {
+#endif
+
 	mutex_lock(&(dev_data->file_mutex));
 
 	switch (whence) {
@@ -333,7 +395,9 @@ static loff_t rmidev_llseek(struct file *filp, loff_t off, int whence)
 
 clean_up:
 	mutex_unlock(&(dev_data->file_mutex));
-
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	} //prevent_sleep
+#endif
 	return newpos;
 }
 

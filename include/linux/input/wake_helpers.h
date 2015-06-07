@@ -1,7 +1,6 @@
 /*
- * include/linux/input/sweep2wake.h
+ * include/linux/input/wake_helpers.h
  *
- * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
  * Copyright (c) 2015, Swapnil Solanki <swapnil133609@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,10 +18,15 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef _LINUX_SWEEP2WAKE_H
-#define _LINUX_SWEEP2WAKE_H
+#ifndef _LINUX_WAKE_HELPERS_H
+#define _LINUX_WAKE_HELPERS_H
 
-extern int s2w_switch, s2w_s2sonly;
+#include <stdbool.h>
 
-#endif	/* _LINUX_SWEEP2WAKE_H */
+extern bool s2w_scr_suspended;
+extern bool dt2w_scr_suspended;
+
+extern int dt2w_sent_play_pause;
+
+#endif  /* _LINUX_WAKE_HELPERS_H */
 

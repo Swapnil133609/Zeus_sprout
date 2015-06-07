@@ -36,11 +36,6 @@
 #include <mach/mt_pm_ldo.h>
 #include <mach/mt_typedefs.h>
 #include <mach/mt_boot.h>
-
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-#include <linux/input/sweep2wake.h>
-#endif
-
 #include "cust_gpio_usage.h"
 #include "tpd.h"
 
@@ -49,6 +44,15 @@
 #include "tpd_custom_synaptics.h"
 #ifdef KERNEL_ABOVE_2_6_38
 #include <linux/input/mt.h>
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
+#include <linux/input/doubletap2wake.h>
+#endif
 #endif
 
 #define DRIVER_NAME "synaptics_dsx_i2c"
@@ -931,26 +935,7 @@ printk("[s3508_11]finger = %d\n",finger);
 #ifndef TYPE_B_PROTOCOL
 			input_mt_sync(rmi4_data->input_dev);
 #endif
-//printk("[SWEEP2WAKE]: inside tpd up\n");
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
 
-				if (sweep2wake > 0) {
-					//printk("[SWEEP2WAKE]:line : %d | func : %s\n", __LINE__, __func__);
-//printk("[SWEEP2WAKE]: resetin s2w param\n");
-					//printk("[SWEEP2WAKE]:line : %d | func : %s\n", __LINE__, __func__);
-					exec_count = true;
-					barrier[0] = false;
-					barrier[1] = false;
-					scr_on_touch = false;
-					tripoff = 0;
-					tripon = 0;
-					triptime = 0;
-				}
-				if (doubletap2wake && scr_suspended) {
-//printk("[SWEEP2WAKE]: detecting d2w\n");
-					doubletap2wake_func(x, y, jiffies);
-				}
-#endif
         if(touch_ssb_data.use_tpd_button == 1){
 			if (NORMAL_BOOT != boot_mode)
 			{   
@@ -1457,6 +1442,23 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 			return retval;
 
 		// set up irq
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+	prevent_sleep = (s2w_switch > 0) && (s2w_s2sonly == 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (prevent_sleep) {
+		enable_irq_wake(rmi4_data->irq_enable);
+	} else {
+#endif
 		if (!rmi4_data->irq_enabled) {
 			printk("\n@@@@@set up eint\n");
 			mt_set_gpio_mode(GPIO_CTP_EINT_PIN, GPIO_CTP_EINT_PIN_M_EINT);
@@ -1470,7 +1472,7 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 			}
 		mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
 		rmi4_data->irq_enabled = true;
-	} else {
+	
 		if (rmi4_data->irq_enabled) {
 			mt_eint_mask(CUST_EINT_TOUCH_PANEL_NUM);
 			mt_set_gpio_mode(GPIO_CTP_EINT_PIN, GPIO_CTP_EINT_PIN_M_GPIO);
@@ -1479,11 +1481,10 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 			mt_set_gpio_pull_select(GPIO_CTP_EINT_PIN, GPIO_PULL_UP);
 			rmi4_data->irq_enabled = false;
 		}
-                 if (sweep2wake > 0 || doubletap2wake > 0) {
-                    mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
-                 }
 	}
-
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	} //prevent_sleep
+#endif
 	return retval;
 }
 
@@ -1515,6 +1516,23 @@ static int synaptics_rmi4_f01_init(struct synaptics_rmi4_data *rmi4_data,
 		struct synaptics_rmi4_fn_desc *fd,
 		unsigned int intr_count)
 {
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+	prevent_sleep = (s2w_switch > 0) && (s2w_s2sonly == 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (prevent_sleep) {
+		disable_irq_wake(rmi4_data->irq);
+	} else {
+#endif
 	fhandler->fn_number = fd->fn_number;
 	fhandler->num_of_data_sources = fd->intr_src_count;
 	fhandler->data = NULL;
@@ -1528,6 +1546,9 @@ static int synaptics_rmi4_f01_init(struct synaptics_rmi4_data *rmi4_data,
 	rmi4_data->f01_cmd_base_addr = fd->cmd_base_addr;
 
 	return 0;
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+       }
+#endif
 }
 
  /**
@@ -2531,6 +2552,24 @@ static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
 		}
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	bool prevent_sleep = false;
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
+	prevent_sleep = (s2w_switch > 0) && (s2w_s2sonly == 0);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
+	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
+#endif
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	if (prevent_sleep) {
+		enable_irq_wake(rmi4_data->irq);
+	} else {
+#endif
+
 	mutex_lock(&exp_data.mutex);
 	if (!list_empty(&exp_data.list)) {
 		list_for_each_entry(exp_fhandler, &exp_data.list, link)
@@ -2538,7 +2577,9 @@ static int synaptics_rmi4_reinit_device(struct synaptics_rmi4_data *rmi4_data)
 				exp_fhandler->exp_fn->reinit(rmi4_data);
 	}
 	mutex_unlock(&exp_data.mutex);
-
+#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+	} //prevent_sleep
+#endif
 	synaptics_rmi4_set_configured(rmi4_data);
 
 	retval = 0;
