@@ -679,14 +679,6 @@ struct xhci_ep_ctx {
 /* deq bitmasks */
 #define EP_CTX_CYCLE_MASK		(1 << 0)
 
-#ifdef CONFIG_MTK_XHCI
-/* mtk scheduler bitmasks */
-#define BPKTS(p)	((p) & 0x3f)
-#define BCSCOUNT(p)	(((p) & 0x7) << 8)
-#define BBM(p)		((p) << 11)
-#define BOFFSET(p)	((p) & 0x3fff)
-#define BREPEAT(p)	(((p) & 0x7fff) << 16)
-#endif
 
 /**
  * struct xhci_input_control_context
@@ -1245,7 +1237,7 @@ union xhci_trb {
  * since the command ring is 64-byte aligned.
  * It must also be greater than 16.
  */
-#define TRBS_PER_SEGMENT	64
+#define TRBS_PER_SEGMENT	256
 /* Allow two commands + a link TRB, along with any reserved command TRBs */
 #define MAX_RSVD_CMD_TRBS	(TRBS_PER_SEGMENT - 3)
 #define TRB_SEGMENT_SIZE	(TRBS_PER_SEGMENT*16)
@@ -1506,9 +1498,7 @@ struct xhci_hcd {
 #define	XHCI_LINK_TRB_QUIRK	(1 << 0)
 #define XHCI_RESET_EP_QUIRK	(1 << 1)
 #define XHCI_NEC_HOST		(1 << 2)
-#ifndef CONFIG_MTK_XHCI
 #define XHCI_AMD_PLL_FIX	(1 << 3)
-#endif
 #define XHCI_SPURIOUS_SUCCESS	(1 << 4)
 /*
  * Certain Intel host controllers have a limit to the number of endpoint
@@ -1523,9 +1513,7 @@ struct xhci_hcd {
 #define XHCI_BROKEN_MSI		(1 << 6)
 #define XHCI_RESET_ON_RESUME	(1 << 7)
 #define	XHCI_SW_BW_CHECKING	(1 << 8)
-#ifndef CONFIG_MTK_XHCI
 #define XHCI_AMD_0x96_HOST	(1 << 9)
-#endif
 #define XHCI_TRUST_TX_LENGTH	(1 << 10)
 #define XHCI_LPM_SUPPORT	(1 << 11)
 #define XHCI_INTEL_HOST		(1 << 12)
