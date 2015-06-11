@@ -21,9 +21,6 @@ config IOSCHED_DEADLINE
 	  a new point in the service tree and doing a batch of IO from there
 	  in case of expiry.
 
-<<<<<<< HEAD
-=======
-
 config IOSCHED_FIOPS
 	tristate "IOPS based I/O scheduler"
 	default y
@@ -32,17 +29,6 @@ config IOSCHED_FIOPS
           IOPS equally among all processes in the system. It's mainly for
           Flash based storage.
 
-config IOSCHED_SIOPLUS
-	tristate "SIO I/O scheduler"
-	default y
-	---help---
-	  The Simple I/O scheduler is an extremely simple scheduler,
-	  based on NOOP, that relies on deadlines to
-	  ensure fairness. The algorithm does not do any sorting but
-	  basic merging, trying to keep a minimum overhead. It is aimed
-	  mainly for aleatory access devices (eg: flash devices).
-
->>>>>>> 645c590... Add FIOPS I/O scheduler
 config IOSCHED_ROW
 	tristate "ROW I/O scheduler"
 	default y
@@ -92,9 +78,6 @@ choice
 
 	config DEFAULT_FIOPS
 		bool "FIOPS" if IOSCHED_FIOPS=y
-
-        config DEFAULT_SIOPLUS
-		bool "SIOPLUS" if IOSCHED_SIOPLUS=y
 
 	config DEFAULT_ROW
 		bool "ROW" if IOSCHED_ROW=y
