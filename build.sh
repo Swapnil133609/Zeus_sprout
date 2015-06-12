@@ -35,7 +35,7 @@ nocol='\033[0m'         # Default
 export ARCH=arm
 export SUBARCH=arm
 export KBUILD_BUILD_USER="Swapnil"
-export KBUILD_BUILD_HOST="Mad-Monster"
+export KBUILD_BUILD_HOST="Dark-Knight"
 export CROSS_COMPILE=/home/swapnil/toolchain/arm-cortex-a7/bin/arm-cortex_a7-linux-gnueabihf-
 
 # Compilation Scripts Are Below
