@@ -437,6 +437,11 @@ config TOUCHSCREEN_PREVENT_SLEEP
        help
          This disables the sleep function of modified touchscreen drivers.
 
+config TOUCHSCREEN_TAP2UNLOCK
+	tristate "Tap to unlock for touchscreens"
+	select TOUCHSCREEN_PREVENT_SLEEP
+	default y
+
 # Touch panel
 config MTK_GT9XX
         bool "GT9XX for Mediatek package"
