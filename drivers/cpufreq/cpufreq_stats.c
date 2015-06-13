@@ -350,7 +350,7 @@ static int cpufreq_stats_create_table(struct cpufreq_policy *policy,
 	if (!stat->time_in_state) {
 		ret = -ENOMEM;
 		pr_err("Failed to alloc cpufreq_stats table\n");
-		goto error_alloc;
+		goto error_out;
 	}
 	stat->freq_table = (unsigned int *)(stat->time_in_state + count);
 
