@@ -31,9 +31,6 @@
 #ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
 #include <linux/input/doubletap2wake.h>
 #endif
-#ifdef CONFIG_TOUCHSCREEN_TAP2UNLOCK
-#include <linux/input/tap2unlock.h>
-#endif
 #endif
 
 #define KPD_NAME	"mtk-kpd"

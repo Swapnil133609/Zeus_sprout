@@ -35,9 +35,6 @@
 #ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
 #include <linux/input/doubletap2wake.h>
 #endif
-#ifdef CONFIG_TOUCHSCREEN_TAP2UNLOCK
-#include <linux/input/tap2unlock.h>
-#endif
 #endif
 
 /* for magnify velocity******************************************** */
@@ -303,8 +300,9 @@ static void tpd_create_attributes(struct device *dev, struct tpd_attrs *attrs)
 }
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+
 static void eros_suspend(struct early_suspend *h) {
-#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_TAP2UNLOCK)
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
 	bool prevent_sleep = false;
 #endif
 	/*
@@ -322,11 +320,6 @@ static void eros_suspend(struct early_suspend *h) {
 	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
 	dt2w_scr_suspended = true;
 #endif
-#if defined(CONFIG_TOUCHSCREEN_TAP2UNLOCK)
-        prevent_sleep = ((t2u_switch > 0) && (t2u_allow == false));
-        t2u_scr_suspended = true;
-        t2u_duplicate_allow = false;
-#endif
 
 	if (prevent_sleep) {
 		mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
@@ -336,17 +329,7 @@ static void eros_suspend(struct early_suspend *h) {
 }
 
 static void eros_resume(struct early_suspend *h) {
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-pr_info("t2u :resume called ,t2u_allow %d , t2u_scr_suspended %d ", t2u_allow, t2u_scr_suspended);
-	if (t2u_switch > 0 && t2u_allow == false && t2u_scr_suspended == false && incall_active == false) {
-
-	       pr_info("t2u : touch sensor awake blocked by t2u protect");
-	       return 0;
-       }
-#endif
-
-
-#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_TAP2UNLOCK)
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
 	bool prevent_sleep = false;
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
@@ -356,10 +339,6 @@ pr_info("t2u :resume called ,t2u_allow %d , t2u_scr_suspended %d ", t2u_allow, t
 #if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
 	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
 	dt2w_scr_suspended = false;
-#endif
-#if defined(CONFIG_TOUCHSCREEN_TAP2UNLOCK)
-        prevent_sleep = ((t2u_switch > 0) && (t2u_allow == false));
-	t2u_scr_suspended = false;
 #endif
 
 	if (prevent_sleep) {
