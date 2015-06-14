@@ -935,7 +935,7 @@ static void update_sampling_rate(struct dbs_data *dbs_data, unsigned int new_rat
 		policy = cpufreq_cpu_get(0);
 		if (!policy)
 			return;
-		if (policy->governor != &cpufreq_gov_hotplug) {
+		if (strcmp(policy->governor->name, "hotplug") != 0) {
 			cpufreq_cpu_put(policy);
 			return;
 		}
@@ -993,7 +993,7 @@ void hp_enable_timer(int enable)
 	policy = cpufreq_cpu_get(cpu);
 	if (!policy)
 		continue;
-	if (policy->governor != &cpufreq_gov_hotplug) {
+	if (strcmp(policy->governor->name, "hotplug") != 0) {
 		cpufreq_cpu_put(policy);
 		continue;
 	}
@@ -1815,7 +1815,7 @@ static void hp_set_powersave_bias(unsigned int powersave_bias)
 
 		cpumask_or(&done, &done, policy->cpus);
 
-		if (policy->governor != &cpufreq_gov_hotplug)
+		if (strcmp(policy->governor->name, "hotplug") != 0)
 			continue;
 
 		dbs_data = policy->governor_data;
