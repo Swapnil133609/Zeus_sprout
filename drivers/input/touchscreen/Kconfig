@@ -421,27 +421,6 @@ config TOUCHSCREEN_MTK
 	help
 	  Say Y here if you have MediaTek touch panel.
 
-config TOUCHSCREEN_SWEEP2WAKE
-       tristate "Sweep2Wake for touchscreens"
-       select TOUCHSCREEN_PREVENT_SLEEP
-       default n
-
-config TOUCHSCREEN_DOUBLETAP2WAKE
-       tristate "DoubleTap2Wake for touchscreens"
-       select TOUCHSCREEN_PREVENT_SLEEP
-       default n
-
-config TOUCHSCREEN_PREVENT_SLEEP
-       bool "Inihibit sleep on modified touchscreen drivers"
-       default n
-       help
-         This disables the sleep function of modified touchscreen drivers.
-
-config TOUCHSCREEN_TAP2UNLOCK
-	tristate "Tap to unlock for touchscreens"
-	select TOUCHSCREEN_PREVENT_SLEEP
-	default y
-
 # Touch panel
 config MTK_GT9XX
         bool "GT9XX for Mediatek package"
