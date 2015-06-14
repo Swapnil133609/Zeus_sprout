@@ -1,7 +1,7 @@
 /*
- * include/linux/input/doubletap2wake.h
+ * drivers/input/touchscreen/wake_helpers.c
  *
- * Copyright (c) 2013, Dennis Rassmann <showp1984@gmail.com>
+ *
  * Copyright (c) 2015, Swapnil Solanki <swapnil133609@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -19,10 +19,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef _LINUX_DOUBLETAP2WAKE_H
-#define _LINUX_DOUBLETAP2WAKE_H
+#include <linux/input/wake_helpers.h>
 
-extern int dt2w_switch;
+int is_headset_in_use(void) {
+	return var_is_headset_in_use;
+}
 
-#endif	/* _LINUX_DOUBLETAP2WAKE_H */
+int in_phone_call(void) {
+	return var_in_phone_call;
+}
 

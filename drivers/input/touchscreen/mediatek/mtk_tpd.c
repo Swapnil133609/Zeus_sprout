@@ -28,6 +28,7 @@
 #include <linux/slab.h>
 #include <asm/uaccess.h>
 
+<<<<<<< HEAD
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -43,6 +44,8 @@
 #endif
 #endif
 
+=======
+>>>>>>> parent of 5f356a7... Wake Gestures: Clean Files
 /* for magnify velocity******************************************** */
 #define TOUCH_IOC_MAGIC 'A'
 
@@ -173,12 +176,6 @@ static int tpd_remove(struct platform_device *pdev);
 
 extern void tpd_suspend(struct early_suspend *h);
 extern void tpd_resume(struct early_suspend *h);
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#include <cust_eint.h>
-void (*nyx_suspend) (struct early_suspend *h);
-void (*nyx_resume) (struct early_suspend *h);
-#endif
-
 extern void tpd_button_init(void);
 
 /* int tpd_load_status = 0; //0: failed, 1: sucess */
@@ -305,6 +302,7 @@ static void tpd_create_attributes(struct device *dev, struct tpd_attrs *attrs)
 		device_create_file(dev, attrs->attr[--num]);
 }
 
+<<<<<<< HEAD
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
 
 static void eros_suspend(struct early_suspend *h) {
@@ -379,6 +377,8 @@ static void eros_resume(struct early_suspend *h) {
 
 #endif
 
+=======
+>>>>>>> parent of 5f356a7... Wake Gestures: Clean Files
 /* touch panel probe */
 static int tpd_probe(struct platform_device *pdev)
 {
@@ -466,34 +466,9 @@ static int tpd_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	MTK_TS_early_suspend_handler.suspend = g_tpd_drv->suspend;
 	MTK_TS_early_suspend_handler.resume = g_tpd_drv->resume;
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	if ((g_tpd_drv->suspend != NULL) && (g_tpd_drv->resume != NULL)) {
-		nyx_suspend = g_tpd_drv->suspend;
-		nyx_resume  = g_tpd_drv->resume;
-		MTK_TS_early_suspend_handler.suspend = eros_suspend;
-		MTK_TS_early_suspend_handler.resume  = eros_resume;
-	}
-#endif
 	register_early_suspend(&MTK_TS_early_suspend_handler);
 #endif
 #endif
-
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	if ((g_tpd_drv->suspend != NULL) && (g_tpd_drv->resume != NULL)) {
-		if ((nyx_suspend == NULL) && (nyx_resume == NULL)) {
-			/*
-			 * in case nyx_suspend || nyx_resume != NULL
-			 * they have _suspend|_resume functions in them;
-			 * in which case leave them alone.
-			 */
-			nyx_suspend = g_tpd_drv->suspend;
-			nyx_resume  = g_tpd_drv->resume;
-			g_tpd_drv->suspend = eros_suspend;
-			g_tpd_drv->resume  = eros_resume;
-		}
-	}
-#endif
-
 /* #ifdef TPD_TYPE_CAPACITIVE */
 	/* TPD_TYPE_CAPACITIVE handle */
 	if (touch_type == 1) {
