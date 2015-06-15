@@ -36,7 +36,7 @@ export ARCH=arm
 export SUBARCH=arm
 export KBUILD_BUILD_USER="Swapnil"
 export KBUILD_BUILD_HOST="Dark-Knight"
-export CROSS_COMPILE=/home/swapnil/UBERTC/bin/arm-eabi-
+export CROSS_COMPILE=/home/swapnil/toolchain/arm-cortex-a7/bin/arm-cortex_a7-linux-gnueabihf-
 
 # Compilation Scripts Are Below
 compile_kernel ()
