@@ -122,19 +122,6 @@ task_notify_func(struct notifier_block *self, unsigned long val, void *data);
 static struct notifier_block task_nb = {
 	.notifier_call	= task_notify_func,
 };
-	for_each_thread(p,t) {
-		task_lock(t);
-		if (test_tsk_thread_flag(t, flag)) {
-			task_unlock(t);
-			return 1;
-		}
-		task_unlock(t);
-	}
-
-	return 0;
-}
-
-static DEFINE_MUTEX(scan_mutex);
 
 static int
 task_notify_func(struct notifier_block *self, unsigned long val, void *data)
