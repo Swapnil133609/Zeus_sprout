@@ -327,6 +327,7 @@ static void eros_suspend(struct early_suspend *h) {
 	dt2w_scr_suspended = true;
 #endif
 #if defined(CONFIG_TOUCHSCREEN_TAP2UNLOCK)
+	prevent_sleep = prevent_sleep || (t2u_switch > 0);
 	t2u_scr_suspended = true;
 	t2u_allow = false;
 #endif
@@ -351,7 +352,7 @@ static void eros_resume(struct early_suspend *h) {
 	dt2w_scr_suspended = false;
 #endif
 #if defined(CONFIG_TOUCHSCREEN_TAP2UNLOCK)
-	prevent_sleep = (t2u_switch > 0) && (t2u_allow == false);
+	prevent_sleep = prevent_sleep || (t2u_switch > 0) || (t2u_allow == false);
 	t2u_scr_suspended = false;
 	t2u_allow = false;
 #endif
