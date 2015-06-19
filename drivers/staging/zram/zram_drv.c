@@ -56,7 +56,7 @@ void zram_set_hooks(void *compress_func, void *decompress_func)
 EXPORT_SYMBOL(zram_set_hooks);
 
 /* Module params (documentation at end) */
-static unsigned int num_devices = 1;
+static unsigned int num_devices = 4;
 
 static void zram_stat64_add(struct zram *zram, u64 *v, u64 inc)
 {
