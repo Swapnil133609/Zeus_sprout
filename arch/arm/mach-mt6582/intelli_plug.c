@@ -91,6 +91,11 @@ static unsigned int nr_run_thresholds_eco[] = {
         3,  UINT_MAX /* avg run threads * 2 (e.g., 9 = 2.25 threads) */
         };
 
+static unsigned int nr_run_thresholds_eco_extreme[] = {
+/*      1 - on-line cpu target */
+        5,  UINT_MAX /* avg run threads * 2 (e.g., 9 = 2.25 threads) */
+        };
+
 static unsigned int nr_run_thresholds_disable[] = {
 /* 	1,  2,  3,  4 - on-line cpus target */
 	0,  0,  0,  UINT_MAX /* avg run threads * 2 (e.g., 9 = 2.25 threads) */
@@ -101,6 +106,7 @@ static unsigned int *nr_run_profiles[] = {
 	nr_run_thresholds_balance,
 	nr_run_thresholds_performance,
 	nr_run_thresholds_eco,
+	nr_run_thresholds_eco_extreme,
 	nr_run_thresholds_disable,
 };
 
