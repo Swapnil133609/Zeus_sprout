@@ -38,5 +38,10 @@ config MAX_DRAM_SIZE_SUPPORT
 	        reserved for the modem and the PMEM.
 endmenu
 
+config INTELLI_PLUG
+	bool "Enable intelli-plug cpu hotplug driver"
+	default n
+	help
+	  Generic Intelli-plug cpu hotplug driver for ARM SOCs
 
 endif

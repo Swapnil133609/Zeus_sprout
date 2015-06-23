@@ -118,7 +118,6 @@ static int mp_decision(void)
 	}
 	total_time += this_time;
 
-	rq_depth = rq_info.rq_avg;
 	//pr_info(" rq_deptch = %u", rq_depth);
 	nr_cpu_online = num_online_cpus();
 
@@ -147,7 +146,7 @@ static int mp_decision(void)
 
 static unsigned int calculate_thread_stats(void)
 {
-	unsigned int avg_nr_run = avg_nr_running();
+	unsigned int avg_nr_run;
 	unsigned int nr_run;
 	unsigned int threshold_size;
 
