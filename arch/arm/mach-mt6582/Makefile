@@ -21,7 +21,6 @@ obj-y += mt_pm_init.o
 ifeq ($(CONFIG_SMP),y)
 ccflags-y += -I$(srctree)
 obj-y += mt-smp.o hotplug.o mt-headsmp.o mt_hotplug.o mt_hotplug_mechanism.o
-obj-$(CONFIG_INTELLI_PLUG) += intelli_plug.o
 endif
 # TO-FIX add # for do early porting in JB migration
 obj-y += eint.o eint_irq.o mt_freqhopping.o
