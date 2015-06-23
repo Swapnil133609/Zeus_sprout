@@ -23,11 +23,15 @@
 #include <linux/input.h>
 #include <linux/cpufreq.h>
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
+
 //#define DEBUG_INTELLI_PLUG
 #undef DEBUG_INTELLI_PLUG
 
 #define INTELLI_PLUG_MAJOR_VERSION	3
-#define INTELLI_PLUG_MINOR_VERSION	6
+#define INTELLI_PLUG_MINOR_VERSION	7
 
 #define DEF_SAMPLING_MS			(268)
 
@@ -57,7 +61,7 @@ module_param(nr_run_profile_sel, uint, 0644);
 //default to something sane rather than zero
 static unsigned int sampling_time = DEF_SAMPLING_MS;
 
-static unsigned int persist_count = 0;
+static int persist_count = 0;
 
 static bool suspended = false;
 
@@ -225,10 +229,12 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 		nr_cpus = num_online_cpus();
 
 		if (!suspended) {
+
+			if (persist_count > 0)
+				persist_count--;
+
 			switch (cpu_count) {
 			case 1:
-				if (persist_count > 0)
-					persist_count--;
 				if (persist_count == 0) {
 					//take down everyone
 					unplug_cpu(0);
@@ -238,7 +244,8 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 #endif
 				break;
 			case 2:
-				persist_count = DUAL_PERSISTENCE;
+				if (persist_count == 0)
+					persist_count = DUAL_PERSISTENCE;
 				if (nr_cpus < 2) {
 					for (i = 1; i < cpu_count; i++)
 						cpu_up(i);
@@ -250,7 +257,8 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 #endif
 				break;
 			case 3:
-				persist_count = TRI_PERSISTENCE;
+				if (persist_count == 0)
+					persist_count = TRI_PERSISTENCE;
 				if (nr_cpus < 3) {
 					for (i = 1; i < cpu_count; i++)
 						cpu_up(i);
@@ -262,7 +270,8 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 #endif
 				break;
 			case 4:
-				persist_count = QUAD_PERSISTENCE;
+				if (persist_count == 0)
+					persist_count = QUAD_PERSISTENCE;
 				if (nr_cpus < 4)
 					for (i = 1; i < cpu_count; i++)
 						cpu_up(i);
