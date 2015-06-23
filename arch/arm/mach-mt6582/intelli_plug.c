@@ -28,7 +28,7 @@
 #undef DEBUG_INTELLI_PLUG
 
 #define INTELLI_PLUG_MAJOR_VERSION	3
-#define INTELLI_PLUG_MINOR_VERSION	3
+#define INTELLI_PLUG_MINOR_VERSION	5
 
 #define DEF_SAMPLING_MS			(268)
 
@@ -48,9 +48,6 @@ static struct workqueue_struct *intelliplug_boost_wq;
 
 static unsigned int intelli_plug_active = 0;
 module_param(intelli_plug_active, uint, 0644);
-
-static unsigned int eco_mode_active = 0;
-module_param(eco_mode_active, uint, 0644);
 
 static unsigned int touch_boost_active = 1;
 module_param(touch_boost_active, uint, 0644);
@@ -130,25 +127,19 @@ static unsigned int calculate_thread_stats(void)
 	unsigned int threshold_size;
 	unsigned int *current_profile;
 
-	if (!eco_mode_active ||
-		!(nr_run_profile_sel == NR_RUN_ECO_MODE_PROFILE)) {
-		current_profile = nr_run_profiles[nr_run_profile_sel];
+	current_profile = nr_run_profiles[nr_run_profile_sel];
+	if (num_possible_cpus() > 2)
 		threshold_size =
 			ARRAY_SIZE(nr_run_thresholds_balance);
-		nr_fshift = 3;
+	else
+		threshold_size =
+			ARRAY_SIZE(nr_run_thresholds_eco);
+
 #ifdef DEBUG_INTELLI_PLUG
 		pr_info("intelliplug: full mode active!");
 #endif
-	}
-	else {
-		current_profile = nr_run_profiles[NR_RUN_ECO_MODE_PROFILE];
-		threshold_size =
-			ARRAY_SIZE(nr_run_thresholds_eco);
-		nr_fshift = 1;
-#ifdef DEBUG_INTELLI_PLUG
-		pr_info("intelliplug: eco mode active!");
-#endif
-	}
+
+	nr_fshift = num_possible_cpus() - 1;
 
 	for (nr_run = 1; nr_run < threshold_size; nr_run++) {
 		unsigned int nr_threshold;
@@ -368,10 +359,7 @@ static void __cpuinit intelli_plug_late_resume(struct early_suspend *handler)
 	mutex_unlock(&intelli_plug_mutex);
 
 	/* wake up everyone */
-	if (eco_mode_active)
-		num_of_active_cores = 2;
-	else
-		num_of_active_cores = num_possible_cpus();
+	num_of_active_cores = num_possible_cpus();
 
 	for (i = 1; i < num_of_active_cores; i++) {
 		cpu_up(i);
@@ -474,10 +462,13 @@ int __init intelli_plug_init(void)
 		 INTELLI_PLUG_MAJOR_VERSION,
 		 INTELLI_PLUG_MINOR_VERSION);
 
-	if (num_possible_cpus() > 2)
+	if (num_possible_cpus() > 2) {
 		nr_run_hysteresis = NR_RUN_HYSTERESIS_QUAD;
-	else
+		nr_run_profile_sel = 0;
+	} else {
 		nr_run_hysteresis = NR_RUN_HYSTERESIS_DUAL;
+		nr_run_profile_sel = NR_RUN_ECO_MODE_PROFILE;
+	}
 
 	rc = input_register_handler(&intelli_plug_input_handler);
 	intelliplug_wq = alloc_workqueue("intelliplug",
