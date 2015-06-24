@@ -979,6 +979,10 @@ static void kcryptd_io_write(struct dm_crypt_io *io)
 	generic_make_request(clone);
 }
 
+#ifdef CONFIG_INTELLI_PLUG
+extern void intelli_plug_perf_boost(bool);
+#endif
+
 static void kcryptd_io(struct work_struct *work)
 {
 	struct dm_crypt_io *io = container_of(work, struct dm_crypt_io, work);
@@ -990,6 +994,9 @@ static void kcryptd_io(struct work_struct *work)
 		crypt_dec_pending(io);
 	} else
 		kcryptd_io_write(io);
+#ifdef CONFIG_INTELLI_PLUG
+		intelli_plug_perf_boost(false);
+#endif
 }
 
 static void kcryptd_queue_io(struct dm_crypt_io *io)
@@ -1638,7 +1645,9 @@ static int crypt_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 		ti->error = "Couldn't create kcryptd queue";
 		goto bad;
 	}
-
+#ifdef CONFIG_INTELLI_PLUG
+	intelli_plug_perf_boost(true);
+#endif
 	ti->num_flush_bios = 1;
 	ti->discard_zeroes_data_unsupported = true;
 
