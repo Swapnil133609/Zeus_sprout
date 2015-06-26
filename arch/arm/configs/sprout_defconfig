@@ -384,6 +384,11 @@ CONFIG_ARM_AMBA=y
 # CONFIG_PCCARD is not set
 
 #
+# Intelli-plug
+#
+CONFIG_INTELLI_PLUG=y
+
+#
 # Kernel Features
 #
 CONFIG_ANDROID=y
