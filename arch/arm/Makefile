@@ -275,6 +275,7 @@ core-$(CONFIG_KVM_ARM_HOST) 	+= arch/arm/kvm/
 core-y				+= arch/arm/kernel/ arch/arm/mm/ arch/arm/common/
 core-y				+= arch/arm/net/
 core-y				+= arch/arm/crypto/
+core-$(CONFIG_THUNDERPLUG_CONTROL) += arch/arm/hotplug/
 core-y				+= $(machdirs) $(platdirs)
 core-$(CONFIG_INTELLI_PLUG)	+= arch/arm/hotplug/
 
