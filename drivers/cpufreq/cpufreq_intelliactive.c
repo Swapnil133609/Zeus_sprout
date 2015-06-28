@@ -1270,6 +1270,15 @@ static void interactive_input_event(struct input_handle *handle,
 static int input_dev_filter(const char *input_dev_name)
 {
 	if (strstr(input_dev_name, "touchscreen") ||
+            /* Add all touch panel drivers for touch boost */
+            strstr(input_dev_name, "gt9xx") ||
+            strstr(input_dev_name, "synaptics_s3203") ||
+            strstr(input_dev_name, "FT5406") ||
+            strstr(input_dev_name, "synaptics_tpd_s3508") ||
+            strstr(input_dev_name, "MSG2133") ||
+            strstr(input_dev_name, "FT6x06") ||
+            strstr(input_dev_name, "mtk-tpd") ||
+            /* Add all touch panel drivers for touch boost */
 	    strstr(input_dev_name, "touch_dev") ||
 	    strstr(input_dev_name, "sec-touchscreen") ||
 	    strstr(input_dev_name, "keypad")) {
