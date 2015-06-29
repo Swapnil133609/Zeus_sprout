@@ -17,5 +17,7 @@
 #define cputime_to_msecs(__ct)		jiffies_to_msecs(__ct)
 #define msecs_to_cputime(__msecs)	msecs_to_jiffies(__msecs)
 #define cputime_sub(__a, __b)		((__a) -  (__b))
+#define cputime64_add(__a, __b) ((__a) + (__b))
+#define cputime64_sub(__a, __b) ((__a) - (__b))
 
 #endif
