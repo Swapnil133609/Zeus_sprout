@@ -51,6 +51,13 @@ config IOSCHED_CFQ
 
 	  This is the default I/O scheduler.
 
+config IOSCHED_VR
+	tristate "V(R) I/O scheduler"
+	default y
+	---help---
+	Requests are chosen according to SSTF with a penalty of rev_penalty
+	for switching head direction.
+
 config CFQ_GROUP_IOSCHED
 	bool "CFQ Group Scheduling support"
 	depends on IOSCHED_CFQ && BLK_CGROUP
@@ -118,8 +125,8 @@ choice
 	config DEFAULT_NOOP
 		bool "No-op"
 
-        config DEFAULT_VR
-               bool "V(R)" if IOSCHED_VR=y
+	config DEFAULT_VR
+		bool "VR" if IOSCHED_VR=y
 
 endchoice
 
