@@ -229,6 +229,10 @@ config CPU_FREQ_DEFAULT_GOV_IMPULSE
 	help
 	  Use the CPUFreq governor 'impulse' as default.
 
+config CPU_FREQ_DEFAULT_GOV_DARKNESS
+	bool "darkness"
+	select CPU_FREQ_GOV_DARKNESS
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -515,6 +519,9 @@ config CPU_FREQ_GOV_IMPULSE
      designed for optimized balance between power and performance.
 
     	If in doubt, say N.
+
+config CPU_FREQ_GOV_DARKNESS
+	tristate "'darkness' cpufreq policy governor"
 
 config GENERIC_CPUFREQ_CPU0
 	tristate "Generic CPU0 cpufreq driver"
