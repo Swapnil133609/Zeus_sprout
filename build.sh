@@ -35,7 +35,7 @@ nocol='\033[0m'         # Default
 export ARCH=arm
 export SUBARCH=arm
 export KBUILD_BUILD_USER="Swapnil"
-export KBUILD_BUILD_HOST="Psycho-PC"
+export KBUILD_BUILD_HOST="Lulz-K"
 export CROSS_COMPILE=/home/swapnil/UBERTC-arm-eabi-6.0-97cef52bb0b9/bin/arm-eabi-
 
 # Compilation Scripts Are Below
