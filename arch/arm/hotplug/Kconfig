@@ -18,8 +18,3 @@ config BLU_PLUG
 	help
 	  The Dynamic hotplug driver automatically online/offline CPUs proportional to system load.
 
-config ALUCARD_HOTPLUG
-	bool "Enable alucard-hotplug cpu hotplug driver"
-	default y
-	help
-	  Generic Alucard-hotplug cpu hotplug driver for ARM SOCs.
