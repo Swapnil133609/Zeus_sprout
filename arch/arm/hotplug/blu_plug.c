@@ -1,11 +1,9 @@
 /*
- * Dynamic Hotplug for mako / hammerhead / sprout
+ * Dynamic Hotplug for mako / hammerhead / shamu
  *
  * Copyright (C) 2013 Stratos Karafotis <stratosk@semaphore.gr> (dyn_hotplug for mako)
  *
- * Copyright (C) 2015 engstk <eng.stk@sapo.pt> (hammerhead port, fixes and changes to blu_plug) 
- *
- * Copyright (C) 2015 Swapnil Solanki <swapnil133609@gmail.com> (sprout implementation)
+ * Copyright (C) 2015 engstk <eng.stk@sapo.pt> (hammerhead & shamu implementation, fixes and changes to blu_plug)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -23,26 +21,21 @@
 #include <linux/workqueue.h>
 #include <linux/sched.h>
 #include <linux/timer.h>
+#include <linux/notifier.h>
 #include <linux/cpufreq.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <linux/input.h>
-
-#ifdef CONFIG_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 
 #define INIT_DELAY		(60 * HZ) /* Initial delay to 60 sec, 4 cores while boot */
 #define DELAY			(HZ / 2)
 #define UP_THRESHOLD		(80)
-#define MIN_ONLINE		(1)
+#define MIN_ONLINE		(2)
 #define MAX_ONLINE		(4)
 #define DEF_DOWN_TIMER_CNT	(6)	/* 3 secs */
 #define DEF_UP_TIMER_CNT	(2)	/* 1 sec */
-#define MAX_CORES_SCREENOFF (1)
-#define MAX_FREQ_SCREENOFF (598000)
-#define MAX_FREQ_PLUG (1040000)
-#define MAX_CORES_PLUG (4)
+#define MAX_CORES_SCREENOFF (2)
+#define MAX_FREQ_SCREENOFF ( 747500)
+#define MAX_FREQ_PLUG (1092000)
 
 static unsigned int up_threshold = UP_THRESHOLD;;
 static unsigned int delay = DELAY;
@@ -55,20 +48,17 @@ static unsigned int up_timer_cnt = DEF_UP_TIMER_CNT;
 static unsigned int max_cores_screenoff = MAX_CORES_SCREENOFF;
 static unsigned int max_freq_screenoff = MAX_FREQ_SCREENOFF;
 static unsigned int max_freq_plug = MAX_FREQ_PLUG;
-static unsigned int max_cores_plug = MAX_CORES_PLUG;
-bool prevsaver = false;
 
 static struct delayed_work dyn_work;
 static struct workqueue_struct *dyn_workq;
-#ifndef CONFIG_EARLYSUSPEND
-static struct work_struct early_suspend, late_resume;
-static struct notifier_block notif;
+static struct work_struct suspend, resume;
+#ifndef WAKE_HOOKS_DEFINED
+#ifndef CONFIG_HAS_EARLYSUSPEND
+static struct notifier_block notify;
+#endif
 #endif
 
-/*
- * Bring online each possible CPU up to max_online threshold if lim is true or
- * up to num_possible_cpus if lim is false
- */
+/* Bring online each possible CPU up to max_online cores */
 static inline void up_all(void)
 {
 	unsigned int cpu;
@@ -185,48 +175,27 @@ static __ref void max_screenoff(bool screenoff)
 	
 	if (screenoff) {
 		max_freq_plug = cpufreq_quick_get_max(0);
-		freq = min(max_freq_screenoff, max_freq_plug);
+		freq = max_freq_screenoff;
 
 		cancel_delayed_work_sync(&dyn_work);
-
-		if (max_freq_plug == 598000) {
-			freq = 598000;
-			max_online = 1;
-			prevsaver = true;
-		}
-		else {
-			freq = max_freq_screenoff;
-			
-			if (max_cores_plug > max_online && prevsaver) {
-				max_online = max_cores_plug;
-				prevsaver = false;
-			}
-			else
-				max_cores_plug = max_online;
-				
-			max_online = max_cores_screenoff;
-		}
 		
 		for_each_possible_cpu(cpu) {
+				if (!cpu_online(cpu))
+					cpu_up(cpu);
 			
-			if (cpu && num_online_cpus() > max_online)
+			if (cpu && num_online_cpus() > max_cores_screenoff)
 				cpu_down(cpu);
 		}
 		cpufreq_update_policy(cpu);
 	}
 	else {
-		if (max_freq_plug == 598000) {
-			freq = 598000;
-			max_online = 2;
-		}
-		else {
-			freq = max_freq_plug;
-			max_online = max_cores_plug;
-		}
+		freq = max_freq_plug;
 		
 		up_all();
 		
 		for_each_possible_cpu(cpu) {
+				if (!cpu_online(cpu))
+					cpu_up(cpu);
 		}
 		cpufreq_update_policy(cpu);
 		
@@ -239,16 +208,39 @@ static __ref void max_screenoff(bool screenoff)
 }
 
 /* On suspend put offline all cores except cpu0*/
-static void dyn_lcd_early_suspend(struct work_struct *work)
+static __ref void dyn_lcd_suspend(struct work_struct *work)
 {	
 	max_screenoff(true);
 }
 
 /* On resume bring online CPUs until max_online to prevent lags */
-static void dyn_lcd_late_resume(struct work_struct *work)
+static __ref void dyn_lcd_resume(struct work_struct *work)
 {
 	max_screenoff(false);
 }
+
+#ifndef WAKE_HOOKS_DEFINED
+#ifndef CONFIG_HAS_EARLYSUSPEND
+static int lcd_notifier_callback(struct notifier_block *this, unsigned long event, void *data)
+{
+	switch (event) {
+	case LCD_EVENT_ON_END:
+	case LCD_EVENT_OFF_START:
+		break;
+	case LCD_EVENT_ON_START:
+		queue_work_on(0, dyn_workq, &resume);
+		break;
+	case LCD_EVENT_OFF_END:
+		queue_work_on(0, dyn_workq, &suspend);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif
+#endif
 
 /******************** Module parameters *********************/
 
@@ -344,6 +336,8 @@ static __ref int set_max_cores_screenoff(const char *val, const struct kernel_pa
 		return -EINVAL;
 	if (i < 1 || i > max_online || i > num_possible_cpus())
 		return -EINVAL;
+	if (i > max_online)
+		max_cores_screenoff = max_online;
 
 	ret = param_set_uint(val, kp);
 	
@@ -363,7 +357,7 @@ static struct kernel_param_ops max_cores_screenoff_ops = {
 module_param_cb(max_cores_screenoff, &max_cores_screenoff_ops, &max_cores_screenoff, 0644);
 
 /* max_freq_screenoff */
-static int set_max_freq_screenoff(const char *val, const struct kernel_param *kp)
+static __ref int set_max_freq_screenoff(const char *val, const struct kernel_param *kp)
 {
 	int ret = MAX_FREQ_SCREENOFF;
 	unsigned int i;
@@ -371,7 +365,7 @@ static int set_max_freq_screenoff(const char *val, const struct kernel_param *kp
 	ret = kstrtouint(val, 10, &i);
 	if (ret)
 		return -EINVAL;
-	if (i < 300000 || i > 598000)
+	if (i < 598000 || i > 1300000)
 		return -EINVAL;
 
 	ret = param_set_uint(val, kp);
@@ -439,16 +433,22 @@ module_param_cb(up_timer_cnt, &up_timer_cnt_ops, &up_timer_cnt, 0644);
 
 /***************** end of module parameters *****************/
 
-#ifndef CONFIG_HAS_EARLYSUSPEND
+static int __init dyn_hp_init(void)
 {
+#ifndef WAKE_HOOKS_DEFINED
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	notify.notifier_call = lcd_notifier_callback;
 	if (lcd_register_client(&notify) != 0)
 		pr_info("%s: lcd client register error\n", __func__);
+#endif
+#endif
 	
 	dyn_workq = alloc_workqueue("dyn_hotplug_workqueue", WQ_HIGHPRI | WQ_FREEZABLE, 0);
 	if (!dyn_workq)
 		return -ENOMEM;
 
+	INIT_WORK(&resume, dyn_lcd_resume);
+	INIT_WORK(&suspend, dyn_lcd_suspend);
 	INIT_DELAYED_WORK(&dyn_work, load_timer);
 	queue_delayed_work_on(0, dyn_workq, &dyn_work, INIT_DELAY);
 
@@ -456,7 +456,6 @@ module_param_cb(up_timer_cnt, &up_timer_cnt_ops, &up_timer_cnt, 0644);
 
 	return 0;
 }
-#endif
 
 static void __exit dyn_hp_exit(void)
 {
@@ -468,6 +467,9 @@ static void __exit dyn_hp_exit(void)
 
 MODULE_AUTHOR("Stratos Karafotis <stratosk@semaphore.gr");
 MODULE_AUTHOR("engstk <eng.stk@sapo.pt>");
-MODULE_DESCRIPTION("'dyn_hotplug' - A dynamic hotplug driver for mako / hammerhead / sprout (blu_plug)");
+MODULE_DESCRIPTION("'dyn_hotplug' - A dynamic hotplug driver for mako / hammerhead / shamu (blu_plug)");
 MODULE_LICENSE("GPLv2");
+
+late_initcall(dyn_hp_init);
+module_exit(dyn_hp_exit);
 
