@@ -254,12 +254,6 @@ config CPU_FREQ_DEFAULT_GOV_PEGASUSQ
         help
           Use the CPUFreq governor 'pegasusq' as default
 
-config CPU_FREQ_DEFAULT_GOV_SLIM
-        bool "slim"
-        select CPU_FREQ_GOV_SLIM
-        help
-          Use the CPUFreq governor 'slim' as default
-
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -571,15 +565,6 @@ config CPU_FREQ_GOV_INTERACTIVEX
 
 config CPU_FREQ_GOV_PEGASUSQ
 	tristate "'pegasusq' cpufreq policy governor"	
-
-config CPU_FREQ_GOV_SLIM
-	tristate "'slim' cpufreq policy governor"
-	select CPU_FREQ_TABLE
-	help
-	  'slim' - This driver adds a dynamic cpufreq policy governor.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called cpufreq_slim.
 
 config GENERIC_CPUFREQ_CPU0
 	tristate "Generic CPU0 cpufreq driver"
