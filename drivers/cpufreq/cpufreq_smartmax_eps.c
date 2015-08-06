@@ -372,6 +372,33 @@ inline static void smartmax_update_min_max(
 
 }
 
+static DEFINE_PER_CPU(int, cpufreq_policy_cpu);
+static DEFINE_PER_CPU(struct rw_semaphore, cpu_policy_rwsem);
+
+#define lock_policy_rwsem(mode, cpu)					\
+static int lock_policy_rwsem_##mode(int cpu)				\
+{									\
+	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);		\
+	BUG_ON(policy_cpu == -1);					\
+	down_##mode(&per_cpu(cpu_policy_rwsem, policy_cpu));		\
+									\
+	return 0;							\
+}
+
+lock_policy_rwsem(read, cpu);
+lock_policy_rwsem(write, cpu);
+
+#define unlock_policy_rwsem(mode, cpu)					\
+static void unlock_policy_rwsem_##mode(int cpu)				\
+{									\
+	int policy_cpu = per_cpu(cpufreq_policy_cpu, cpu);		\
+	BUG_ON(policy_cpu == -1);					\
+	up_##mode(&per_cpu(cpu_policy_rwsem, policy_cpu));		\
+}
+
+unlock_policy_rwsem(read, cpu);
+unlock_policy_rwsem(write, cpu);
+
 inline static void smartmax_update_min_max_allcpus(void) {
 	unsigned int cpu;
 
