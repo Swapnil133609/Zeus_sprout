@@ -29,6 +29,7 @@
 #include <linux/cpumask.h>
 #include <linux/cpufreq.h>
 #include <linux/sched.h>
+#include <linux/sched/rt.h>
 #include <linux/tick.h>
 #include <linux/timer.h>
 #include <linux/workqueue.h>
