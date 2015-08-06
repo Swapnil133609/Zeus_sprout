@@ -11,10 +11,3 @@ config BRICKED_HOTPLUG
 	help
 	  This enables kernel based multi core control.
 
-config BLU_PLUG
-	bool "Dynamic hotplug driver"
-	depends on HOTPLUG_CPU
-	default n
-	help
-	  The Dynamic hotplug driver automatically online/offline CPUs proportional to system load.
-
