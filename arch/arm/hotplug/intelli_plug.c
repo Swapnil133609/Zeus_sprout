@@ -22,10 +22,6 @@
 #include <linux/input.h>
 #include <linux/cpufreq.h>
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -432,10 +428,10 @@ static struct attribute_group intelli_plug_perf_boost_attr_group = {
 static struct kobject *intelli_plug_perf_boost_kobj;
 /* sysfs interface for performance boost (END) */
 
-#ifdef CONFIG_POWERSUSPEND
-static void intelli_plug_suspend(struct power_suspend *handler)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void intelli_plug_early_suspend(struct early_suspend *handler)
 #else
-static void intelli_plug_suspend(struct early_suspend *handler)
+static void intelli_plug_early_suspend(struct early_suspend *handler)
 #endif
 {
 	if (intelli_plug_active) {
@@ -470,10 +466,10 @@ static void wakeup_boost(void)
 	}
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static void __ref intelli_plug_resume(struct power_suspend *handler)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void __ref intelli_plug_late_resume(struct early_suspend *handler)
 #else
-static void __ref intelli_plug_resume(struct early_suspend *handler)
+static void __ref intelli_plug_late_resume(struct early_suspend *handler)
 #endif
 {
 
@@ -500,18 +496,11 @@ static void __ref intelli_plug_resume(struct early_suspend *handler)
 }
 #endif
 
-#ifdef CONFIG_POWERSUSPEND
-static struct power_suspend intelli_plug_power_suspend_driver = {
-	.suspend = intelli_plug_suspend,
-	.resume = intelli_plug_resume,
-};
-#endif  /* CONFIG_POWERSUSPEND */
-
 #ifdef CONFIG_HAS_EARLYSUSPEND
-static struct early_suspend intelli_plug_early_suspend_driver = {
+static struct early_suspend intelli_plug_early_suspend_handler = {
         .level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-        .suspend = intelli_plug_suspend,
-        .resume = intelli_plug_resume,
+        .suspend = intelli_plug_early_suspend,
+        .resume = intelli_plug_late_resume,
 };
 #endif	/* CONFIG_HAS_EARLYSUSPEND */
 
@@ -525,11 +514,35 @@ static void intelli_plug_input_event(struct input_handle *handle,
 		msecs_to_jiffies(10));
 }
 
+static int input_dev_filter(const char *input_dev_name)
+{
+	if (strstr(input_dev_name, "touchscreen") ||
+            /* Add all touch panel drivers for touch boost */
+            strstr(input_dev_name, "gt9xx") ||
+            strstr(input_dev_name, "synaptics_s3203") ||
+            strstr(input_dev_name, "FT5406") ||
+            strstr(input_dev_name, "synaptics_tpd_s3508") ||
+            strstr(input_dev_name, "MSG2133") ||
+            strstr(input_dev_name, "FT6x06") ||
+            strstr(input_dev_name, "mtk-tpd") ||
+            /* Add all touch panel drivers for touch boost */
+	    strstr(input_dev_name, "touch_dev") ||
+	    strstr(input_dev_name, "sec-touchscreen") ||
+	    strstr(input_dev_name, "keypad")) {
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
 static int intelli_plug_input_connect(struct input_handler *handler,
 		struct input_dev *dev, const struct input_device_id *id)
 {
 	struct input_handle *handle;
 	int error;
+
+	if (input_dev_filter(dev->name))
+		return 0;
 
 	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
 	if (!handle)
@@ -623,7 +636,7 @@ int __init intelli_plug_init(void)
 	register_power_suspend(&intelli_plug_power_suspend_driver);
 #endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&intelli_plug_early_suspend_driver);
+	register_early_suspend(&intelli_plug_early_suspend_handler);
 #endif
 	intelliplug_wq = alloc_workqueue("intelliplug",
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
