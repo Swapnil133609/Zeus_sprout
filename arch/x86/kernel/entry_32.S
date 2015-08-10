@@ -438,6 +438,7 @@ sysenter_do_call:
 	call *sys_call_table(,%eax,4)
 sysenter_after_call:
 	movl %eax,PT_EAX(%esp)
+sysenter_after_call:
 	LOCKDEP_SYS_EXIT
 	DISABLE_INTERRUPTS(CLBR_ANY)
 	TRACE_IRQS_OFF
@@ -691,12 +692,12 @@ syscall_fault:
 END(syscall_fault)
 
 syscall_badsys:
-	movl $-ENOSYS,%eax
-	jmp syscall_after_call
+	movl $-ENOSYS,PT_EAX(%esp)
+	jmp syscall_exit
 END(syscall_badsys)
 
 sysenter_badsys:
-	movl $-ENOSYS,%eax
+	movl $-ENOSYS,PT_EAX(%esp)
 	jmp sysenter_after_call
 END(syscall_badsys)
 	CFI_ENDPROC

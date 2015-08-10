@@ -95,7 +95,7 @@ ENDPROC(cpu_v7_dcache_clean_area)
 .equ	cpu_v7_suspend_size, 4 * 8
 #ifdef CONFIG_ARM_CPU_SUSPEND
 ENTRY(cpu_v7_do_suspend)
-	stmfd	sp!, {r4 - r10, lr}
+	stmfd	sp!, {r4 - r11, lr}
 	mrc	p15, 0, r4, c13, c0, 0	@ FCSE/PID
 	mrc	p15, 0, r5, c13, c0, 3	@ User r/o thread ID
 	stmia	r0!, {r4 - r5}
@@ -106,7 +106,7 @@ ENTRY(cpu_v7_do_suspend)
 	mrc	p15, 0, r9, c1, c0, 1	@ Auxiliary control register
 	mrc	p15, 0, r10, c1, c0, 2	@ Co-processor access control
 	stmia	r0, {r6 - r11}
-	ldmfd	sp!, {r4 - r10, pc}
+	ldmfd	sp!, {r4 - r11, pc}
 ENDPROC(cpu_v7_do_suspend)
 
 ENTRY(cpu_v7_do_resume)
@@ -182,6 +182,7 @@ __v7_ca9mp_setup:
 	mov	r10, #(1 << 0)			@ TLB ops broadcasting
 	b	1f
 __v7_ca7mp_setup:
+__v7_ca12mp_setup:
 __v7_ca15mp_setup:
 	mov	r10, #0
 1:
@@ -451,6 +452,17 @@ __v7_ca7mp_proc_info:
 	__v7_proc __v7_ca7mp_setup
 	.size	__v7_ca7mp_proc_info, . - __v7_ca7mp_proc_info
 
+	/*
+	 * ARM Ltd. Cortex A12 processor.
+	 */
+	.type	__v7_ca12mp_proc_info, #object
+__v7_ca12mp_proc_info:
+	.long	0x410fc0d0
+	.long	0xff0ffff0
+	__v7_proc __v7_ca12mp_setup
+	.size	__v7_ca12mp_proc_info, . - __v7_ca12mp_proc_info
+
+		
 	/*
 	 * ARM Ltd. Cortex A15 processor.
 	 */

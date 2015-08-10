@@ -36,6 +36,7 @@
 #include <asm/setup.h>
 #include <asm/sizes.h>
 #include <asm/tlb.h>
+#include <mach/mtk_memcfg.h>
 
 #include "mm.h"
 
@@ -109,9 +110,11 @@ static void __init zone_sizes_init(unsigned long min, unsigned long max)
 }
 
 #ifdef CONFIG_HAVE_ARCH_PFN_VALID
+#define PFN_MASK ((1UL << (64 - PAGE_SHIFT)) - 1)
+
 int pfn_valid(unsigned long pfn)
 {
-	return memblock_is_memory(pfn << PAGE_SHIFT);
+	return (pfn & PFN_MASK) == pfn && memblock_is_memory(pfn << PAGE_SHIFT);
 }
 EXPORT_SYMBOL(pfn_valid);
 #endif
@@ -130,6 +133,27 @@ static void arm64_memory_present(void)
 			       memblock_region_memory_end_pfn(reg));
 }
 #endif
+
+static bool arm64_memblock_steal_permitted = true;
+
+phys_addr_t __init arm64_memblock_steal(phys_addr_t size, phys_addr_t align)
+{
+	phys_addr_t phys;
+
+	BUG_ON(!arm64_memblock_steal_permitted);
+
+	phys = memblock_alloc_base(size, align, MEMBLOCK_ALLOC_ANYWHERE);
+	memblock_free(phys, size);
+	memblock_remove(phys, size);
+	if (phys) {
+		MTK_MEMCFG_LOG_AND_PRINTK(KERN_ALERT"[PHY layout]%ps   :   0x%08llx - 0x%08llx (0x%08llx)\n",
+			__builtin_return_address(0), (unsigned long long)phys, 
+		(unsigned long long)phys + size - 1,
+		(unsigned long long)size);
+	}
+
+	return phys;
+}
 
 void __init arm64_memblock_init(void)
 {
@@ -173,6 +197,7 @@ void __init arm64_memblock_init(void)
 		memblock_reserve(base, size);
 	}
 
+	arm64_memblock_steal_permitted = false;
 	memblock_allow_resize();
 	memblock_dump_all();
 }

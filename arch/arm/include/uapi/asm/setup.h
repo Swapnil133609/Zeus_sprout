@@ -15,6 +15,17 @@
 #define _UAPI__ASMARM_SETUP_H
 
 #include <linux/types.h>
+#include <mach/dfo_boot.h>
+#include <mach/mt_devinfo.h>
+#include <mach/mt_touch_ssb_cust.h>
+#include <mach/mt_keypad_ssb_cust.h>
+#include <mach/mt_auxadc_ssb_cust.h>
+#include <mach/accdet_ssb.h>
+#include <mach/gpio_usage_para.h>
+#include <mach/mt_msdc_ssb_cust.h>
+#include <mach/sensors_ssb.h>
+#include <mach/mt_audio_ssb_cust.h>
+#include <mach/battery_ssb.h>
 
 #define COMMAND_LINE_SIZE 1024
 
@@ -41,6 +52,14 @@ struct tag_core {
 struct tag_mem32 {
 	__u32	size;
 	__u32	start;	/* physical start address */
+};
+
+/* it is allowed to have multiple ATAG_MEM nodes */
+#define ATAG_MEM64	0x54420002
+
+struct tag_mem64 {
+	__u64	size;
+	__u64	start;	/* physical start address */
 };
 
 /* VGA text type displays */
@@ -143,11 +162,98 @@ struct tag_memclk {
 	__u32 fmemclk;
 };
 
+/* boot information */
+#define ATAG_BOOT       0x41000802
+
+struct tag_boot {
+	u32 bootmode;
+};
+
+/*META com port information*/
+#define ATAG_META_COM 0x41000803
+
+struct tag_meta_com {
+	u32 meta_com_type; /* identify meta via uart or usb */
+	u32 meta_com_id;  /* multiple meta need to know com port id */
+};
+
+
+/* MDINFO */
+#define ATAG_MDINFO_DATA 0x41000806
+struct tag_mdinfo_data{
+	u8 md_type[4];
+};
+
+
+#define ATAG_LCMINFO_DATA         (0x41000807)
+struct tag_lcminfo_data{
+   u32 lcm_index;
+};
+
+
+#define ATAG_TEE_DATA 0x41000808
+
+/* general memory descriptor */
+typedef struct {
+    u64 start;
+    u64 size;
+} mem_desc_t;
+
+
+struct tag_para_lcm_data{
+    u32 version;
+};
+
+struct tag_eint_data {
+    char magic[4];
+    u32 count;
+    char payload[1];
+};
+
+/*Para bins information*/
+#define ATAG_TOUCH_CUST_TAG  (0x41000817)
+#define ATAG_SENSORS_TAG     (0x41000818)
+#define ATAG_GPIO_USAGE_TAG  (0x41000819)
+#define ATAG_GPIO_BOOT_TAG   (0x4100081A)
+#define ATAG_LCM_TAG         (0x4100081B)
+#define ATAG_KEYPAD_TAG      (0x4100081C)
+#define ATAG_AUXADC_TAG      (0x4100081D)
+#define ATAG_ACCDET_TAG      (0x4100081E)
+#define ATAG_MSDC0_TAG       (0x4100081F)
+#define ATAG_MSDC1_TAG       (0x41000820)
+#define ATAG_LEDS_TAG        (0x41000821)
+#define ATAG_VIBRATOR_TAG    (0x41000822)
+#define ATAG_BATTERY_TAG     (0x41000823)
+#define ATAG_EINT_TAG        (0x41000824)
+#define ATAG_AUDIOPA_TAG     (0x41000825)
+#define ATAG_MODEL_VERSION_TAG (0x41000826)
+
+struct tag_vibrator_data {
+    unsigned int magic;
+    int vib_vol;
+    unsigned int end_magic;
+};
+
+struct tag_leds_data {
+    unsigned int magic;
+    int led_mode[3];
+    int led_pmic[3];
+    unsigned int end_magic;
+};
+
+struct tag_battery_info_data{
+	u32 battery_buf[MAX_BATTERY_PARA_SIZE];
+};
+struct tag_model_version_info_data {
+    char model[32];
+    unsigned int version;
+};
 struct tag {
 	struct tag_header hdr;
 	union {
 		struct tag_core		core;
 		struct tag_mem32	mem;
+		struct tag_mem64	mem64;
 		struct tag_videotext	videotext;
 		struct tag_ramdisk	ramdisk;
 		struct tag_initrd	initrd;
@@ -165,6 +271,28 @@ struct tag {
 		 * DC21285 specific
 		 */
 		struct tag_memclk	memclk;
+		struct tag_boot         boot;
+		struct tag_meta_com     meta_com;
+		struct tag_devinfo_data devinfo_data;
+		tag_dfo_boot     dfo_data;
+		struct tag_mdinfo_data mdinfo_data;
+		mem_desc_t tee_reserved_mem;
+		struct _gpio_usage gpio_usage_data;
+		struct tag_para_touch_ssb_data touch_ssb_cust;
+		struct tag_para_keypad_ssb_data keypad_ssb_cust;
+		struct tag_para_auxadc_ssb_data auxadc_ssb_cust;
+		struct accdet_ssb_data accdet_mode_data;
+		struct tag_msdc_hw_para msdc0_data;
+		struct tag_msdc_hw_para msdc1_data;
+		struct tag_vibrator_data     vibrator_data;
+		struct tag_leds_data         leds_data;
+		struct tag_lcminfo_data lcminfo_data;
+		struct tag_para_lcm_data lcm_data;
+		struct sensor_tuning_data sensors_tuning;
+		struct tag_eint_data eint_data;
+		struct tag_battery_info_data battery_data;
+		struct tag_audiopa_data audiopa_data;
+		struct tag_model_version_info_data model_version_data;
 	} u;
 };
 

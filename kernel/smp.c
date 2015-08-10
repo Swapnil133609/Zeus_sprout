@@ -12,6 +12,7 @@
 #include <linux/gfp.h>
 #include <linux/smp.h>
 #include <linux/cpu.h>
+#include <asm/relaxed.h>
 
 #include "smpboot.h"
 
@@ -48,10 +49,13 @@ hotplug_cfd(struct notifier_block *nfb, unsigned long action, void *hcpu)
 				cpu_to_node(cpu)))
 			return notifier_from_errno(-ENOMEM);
 		if (!zalloc_cpumask_var_node(&cfd->cpumask_ipi, GFP_KERNEL,
-				cpu_to_node(cpu)))
+				cpu_to_node(cpu))) {
+			free_cpumask_var(cfd->cpumask);
 			return notifier_from_errno(-ENOMEM);
+		}
 		cfd->csd = alloc_percpu(struct call_single_data);
 		if (!cfd->csd) {
+			free_cpumask_var(cfd->cpumask_ipi);
 			free_cpumask_var(cfd->cpumask);
 			return notifier_from_errno(-ENOMEM);
 		}
@@ -102,8 +106,8 @@ void __init call_function_init(void)
  */
 static void csd_lock_wait(struct call_single_data *csd)
 {
-	while (csd->flags & CSD_FLAG_LOCK)
-		cpu_relax();
+	while (cpu_relaxed_read_short(&csd->flags) & CSD_FLAG_LOCK)
+		cpu_read_relax();
 }
 
 static void csd_lock(struct call_single_data *csd)
@@ -269,6 +273,51 @@ int smp_call_function_single(int cpu, smp_call_func_t func, void *info,
 	return err;
 }
 EXPORT_SYMBOL(smp_call_function_single);
+
+/* This function can be used by MTK Monitor only */
+/* Dont use this function directly               */
+int mtk_smp_call_function_single(int cpu, smp_call_func_t func, void *info,
+                             int wait)
+{
+        struct call_single_data d = {
+                .flags = 0,
+        };
+        unsigned long flags;
+        int this_cpu;
+        int err = 0;
+
+        /*
+         * prevent preemption and reschedule on another processor,
+         * as well as CPU removal
+         */
+        this_cpu = get_cpu();
+
+        if (cpu == this_cpu) {
+                local_irq_save(flags);
+                func(info);
+                local_irq_restore(flags);
+        } else {
+                if ((unsigned)cpu < nr_cpu_ids && cpu_online(cpu)) {
+                        struct call_single_data *data = &d;
+
+                        if (!wait)
+                                data = &__get_cpu_var(csd_data);
+
+                        csd_lock(data);
+
+                        cpumask_set_cpu(cpu, data->cpumask);
+                        data->func = func;
+                        data->info = info;
+                        generic_exec_single(cpu, data, wait);
+                } else {
+                        err = -ENXIO;   /* CPU not online */
+                }
+        }
+
+        put_cpu();
+
+        return err;
+}
 
 /*
  * smp_call_function_any - Run a function on any of the given cpus
@@ -586,8 +635,10 @@ EXPORT_SYMBOL(on_each_cpu);
  *
  * If @wait is true, then returns once @func has returned.
  *
- * You must not call this function with disabled interrupts or
- * from a hardware interrupt handler or from a bottom half handler.
+ * You must not call this function with disabled interrupts or from a
+ * hardware interrupt handler or from a bottom half handler.  The
+ * exception is that it may be used during early boot while
+ * early_boot_irqs_disabled is set.
  */
 void on_each_cpu_mask(const struct cpumask *mask, smp_call_func_t func,
 			void *info, bool wait)
@@ -596,9 +647,10 @@ void on_each_cpu_mask(const struct cpumask *mask, smp_call_func_t func,
 
 	smp_call_function_many(mask, func, info, wait);
 	if (cpumask_test_cpu(cpu, mask)) {
-		local_irq_disable();
+		unsigned long flags;
+		local_irq_save(flags);
 		func(info);
-		local_irq_enable();
+		local_irq_restore(flags);
 	}
 	put_cpu();
 }

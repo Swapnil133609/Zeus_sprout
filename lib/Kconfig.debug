@@ -191,14 +191,26 @@ config LOCKUP_DETECTOR
 	  The overhead should be minimal.  A periodic hrtimer runs to
 	  generate interrupts and kick the watchdog task every 4 seconds.
 	  An NMI is generated every 10 seconds or so to check for hardlockups.
+	  If NMIs are not available on the platform, every 12 seconds the
+	  hrtimer interrupt on one cpu will be used to check for hardlockups
+	  on the next cpu.
 
 	  The frequency of hrtimer and NMI events and the soft and hard lockup
 	  thresholds can be controlled through the sysctl watchdog_thresh.
 
-config HARDLOCKUP_DETECTOR
+config HARDLOCKUP_DETECTOR_NMI
 	def_bool y
 	depends on LOCKUP_DETECTOR && !HAVE_NMI_WATCHDOG
 	depends on PERF_EVENTS && HAVE_PERF_EVENTS_NMI
+
+config HARDLOCKUP_DETECTOR_OTHER_CPU
+	def_bool y
+	depends on LOCKUP_DETECTOR && SMP
+	depends on !HARDLOCKUP_DETECTOR_NMI && !HAVE_NMI_WATCHDOG
+
+config HARDLOCKUP_DETECTOR
+	def_bool y
+	depends on HARDLOCKUP_DETECTOR_NMI || HARDLOCKUP_DETECTOR_OTHER_CPU
 
 config BOOTPARAM_HARDLOCKUP_PANIC
 	bool "Panic (Reboot) On Hard Lockups"
@@ -323,6 +335,15 @@ config SCHED_DEBUG
 	  If you say Y here, the /proc/sched_debug file will be provided
 	  that can help debug the scheduler. The runtime overhead of this
 	  option is minimal.
+
+config SYSRQ_SCHED_DEBUG
+	bool "Print scheduling debugging info from sysrq-trigger"
+	depends on SCHED_DEBUG
+	default y
+	help
+	  If you say Y here, the "show-task-states(T)" and
+	  "show-blocked-tasks(W)" sysrq-triggers will print additional
+	  scheduling statistics.
 
 config SCHEDSTATS
 	bool "Collect scheduler statistics"
@@ -669,8 +690,9 @@ config DEBUG_LOCKING_API_SELFTESTS
 	  mutexes and rwsems.
 
 config STACKTRACE
-	bool
+	bool "Stacktrace"
 	depends on STACKTRACE_SUPPORT
+	default y
 
 config DEBUG_STACK_USAGE
 	bool "Stack utilization instrumentation"

@@ -4,6 +4,12 @@
 
 menu "Misc devices"
 
+
+config ANDROID_PMEM
+        bool "Android pmem allocator"
+        default y
+
+
 config SENSORS_LIS3LV02D
 	tristate
 	depends on INPUT
@@ -424,6 +430,10 @@ config TI_DAC7512
 	  This driver can also be built as a module. If so, the module
 	  will be called ti_dac7512.
 
+config UID_STAT
+	bool "UID based statistics tracking exported to /proc/uid_stat"
+	default n
+
 config VMWARE_BALLOON
 	tristate "VMware Balloon Driver"
 	depends on X86 && HYPERVISOR_GUEST
@@ -527,6 +537,13 @@ config SRAM
 	  the genalloc API. It is supposed to be used for small on-chip SRAM
 	  areas found on many SoCs.
 
+
+config THUNDERQUAKE_ENGINE_GPL
+   tristate "Vibrator Intensity Controller for MTK Vibrator"
+   default y
+   help
+   Vibrator Intensity Controller for MTK Vibrator v1.0
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -536,4 +553,5 @@ source "drivers/misc/carma/Kconfig"
 source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/mei/Kconfig"
 source "drivers/misc/vmw_vmci/Kconfig"
+source "drivers/misc/mediatek/Kconfig"
 endmenu

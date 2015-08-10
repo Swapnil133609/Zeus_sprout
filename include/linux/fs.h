@@ -1311,6 +1311,11 @@ struct super_block {
 
 	/* Being remounted read-only */
 	int s_readonly_remount;
+
+#ifdef CONFIG_ASYNC_FSYNC
+#define FLAG_ASYNC_FSYNC        0x1
+	unsigned int fsync_flags;
+#endif
 };
 
 /* superblock cache pruning functions */
@@ -1623,6 +1628,8 @@ struct super_operations {
 #define S_IMA		1024	/* Inode has an associated IMA struct */
 #define S_AUTOMOUNT	2048	/* Automount/referral quasi-directory */
 #define S_NOSEC		4096	/* no suid or xattr security attributes */
+#define S_ATOMIC_COPY	8192	/* Pages mapped with this inode need to be
+				   atomically copied (gem) */
 
 /*
  * Note that nosuid etc flags are inode-specific: setting some file-system
@@ -2047,6 +2054,13 @@ extern struct super_block *freeze_bdev(struct block_device *);
 extern void emergency_thaw_all(void);
 extern int thaw_bdev(struct block_device *bdev, struct super_block *sb);
 extern int fsync_bdev(struct block_device *);
+extern int fsync_super(struct super_block *);
+extern int fsync_no_super(struct block_device *);
+#define FS_FREEZER_FUSE 1
+#define FS_FREEZER_NORMAL 2
+#define FS_FREEZER_ALL (FS_FREEZER_FUSE | FS_FREEZER_NORMAL)
+void freeze_filesystems(int which);
+void thaw_filesystems(int which);
 #else
 static inline void bd_forget(struct inode *inode) {}
 static inline int sync_blockdev(struct block_device *bdev) { return 0; }
@@ -2068,6 +2082,7 @@ static inline void iterate_bdevs(void (*f)(struct block_device *, void *), void 
 }
 #endif
 extern int sync_filesystem(struct super_block *);
+extern void sync_filesystems(int wait);
 extern const struct file_operations def_blk_fops;
 extern const struct file_operations def_chr_fops;
 extern const struct file_operations bad_sock_fops;

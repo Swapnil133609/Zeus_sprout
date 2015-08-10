@@ -753,7 +753,9 @@ static void add_scan_area(unsigned long ptr, size_t size, gfp_t gfp)
 	}
 
 	spin_lock_irqsave(&object->lock, flags);
-	if (ptr + size > object->pointer + object->size) {
+	if (size == SIZE_MAX) {
+		size = object->pointer + object->size - ptr;
+	} else if (ptr + size > object->pointer + object->size) {
 		kmemleak_warn("Scan area larger than object 0x%08lx\n", ptr);
 		dump_object_info(object);
 		kmem_cache_free(scan_area_cache, area);
@@ -1682,6 +1684,17 @@ static const struct file_operations kmemleak_fops = {
  */
 static void kmemleak_do_cleanup(struct work_struct *work)
 {
+<<<<<<< HEAD
+<<<<<<< HEAD
+	mutex_lock(&scan_mutex);
+	stop_scan_thread();
+
+	if (!kmemleak_found_leaks)
+		__kmemleak_do_cleanup();
+	else
+		pr_info("Kmemleak disabled without freeing internal data. "
+			"Reclaim the memory with \"echo clear > /sys/kernel/debug/kmemleak\"\n");
+=======
 	struct kmemleak_object *object;
 	bool cleanup = scan_thread == NULL;
 
@@ -1689,11 +1702,23 @@ static void kmemleak_do_cleanup(struct work_struct *work)
 	stop_scan_thread();
 
 	if (cleanup) {
+=======
+	struct kmemleak_object *object;
+
+	mutex_lock(&scan_mutex);
+	stop_scan_thread();
+
+	if (!kmemleak_found_leaks) {
+>>>>>>> parent of 236ca0e... kmemleak: allow freeing internal objects after kmemleak was disabled
 		rcu_read_lock();
 		list_for_each_entry_rcu(object, &object_list, object_list)
 			delete_object_full(object->pointer);
 		rcu_read_unlock();
 	}
+<<<<<<< HEAD
+>>>>>>> parent of b1f3f50... kmemleak: free internal objects only if there're no leaks to be reported
+=======
+>>>>>>> parent of 236ca0e... kmemleak: allow freeing internal objects after kmemleak was disabled
 	mutex_unlock(&scan_mutex);
 }
 

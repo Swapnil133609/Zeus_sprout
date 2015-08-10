@@ -39,6 +39,9 @@ enum {
 	MIGRATE_UNMOVABLE,
 	MIGRATE_RECLAIMABLE,
 	MIGRATE_MOVABLE,
+#ifdef CONFIG_MTKPASR
+	MIGRATE_MTKPASR,
+#endif
 	MIGRATE_PCPTYPES,	/* the number of types on the pcp lists */
 	MIGRATE_RESERVE = MIGRATE_PCPTYPES,
 #ifdef CONFIG_CMA
@@ -67,6 +70,12 @@ enum {
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
 #else
 #  define is_migrate_cma(migratetype) false
+#endif
+
+#ifdef CONFIG_MTKPASR
+#define is_migrate_mtkpasr(mt)	unlikely((mt) == MIGRATE_MTKPASR)
+#else
+#define	is_migrate_mtkpasr(mt)	false
 #endif
 
 #define for_each_migratetype_order(order, type) \
@@ -143,6 +152,9 @@ enum zone_stat_item {
 #endif
 	NR_ANON_TRANSPARENT_HUGEPAGES,
 	NR_FREE_CMA_PAGES,
+#ifdef CONFIG_UKSM
+	NR_UKSM_ZERO_PAGES,
+#endif
 	NR_VM_ZONE_STAT_ITEMS };
 
 /*
@@ -361,6 +373,16 @@ struct zone {
 	unsigned long		compact_cached_free_pfn;
 	unsigned long		compact_cached_migrate_pfn;
 #endif
+
+#ifdef CONFIG_MEMORY_ISOLATION
+	/*
+	 * Number of isolated pageblock. It is used to solve incorrect
+	 * freepage counting problem due to racy retrieving migratetype
+	 * of pageblock. Protected by zone->lock.
+	 */
+	unsigned long           nr_isolate_pageblock;
+#endif
+
 #ifdef CONFIG_MEMORY_HOTPLUG
 	/* see spanned/present_pages for more description */
 	seqlock_t		span_seqlock;
@@ -849,7 +871,7 @@ static inline int is_normal_idx(enum zone_type idx)
 }
 
 /**
- * is_highmem - helper function to quickly check if a struct zone is a 
+ * is_highmem - helper function to quickly check if a struct zone is a
  *              highmem zone or not.  This is an attempt to keep references
  *              to ZONE_{DMA/NORMAL/HIGHMEM/etc} in general code to a minimum.
  * @zone - pointer to struct zone variable
@@ -896,6 +918,12 @@ int min_free_kbytes_sysctl_handler(struct ctl_table *, int,
 extern int sysctl_lowmem_reserve_ratio[MAX_NR_ZONES-1];
 int lowmem_reserve_ratio_sysctl_handler(struct ctl_table *, int,
 					void __user *, size_t *, loff_t *);
+int wmark_min_kbytes_sysctl_handler(struct ctl_table *, int,
+					void __user *, size_t *, loff_t *);
+int wmark_low_kbytes_sysctl_handler(struct ctl_table *, int,
+					void __user *, size_t *, loff_t *);
+int wmark_high_kbytes_sysctl_handler(struct ctl_table *, int,
+					void __user *, size_t *, loff_t *);
 int percpu_pagelist_fraction_sysctl_handler(struct ctl_table *, int,
 					void __user *, size_t *, loff_t *);
 int sysctl_min_unmapped_ratio_sysctl_handler(struct ctl_table *, int,
@@ -919,6 +947,14 @@ extern struct pglist_data contig_page_data;
 #include <asm/mmzone.h>
 
 #endif /* !CONFIG_NEED_MULTIPLE_NODES */
+
+#ifdef CONFIG_MTKPASR
+#ifdef CONFIG_HIGHMEM
+#define MTKPASR_ZONE		(NODE_DATA(0)->node_zones + ZONE_HIGHMEM)
+#else
+#define MTKPASR_ZONE		(NODE_DATA(0)->node_zones)
+#endif
+#endif
 
 extern struct pglist_data *first_online_pgdat(void);
 extern struct pglist_data *next_online_pgdat(struct pglist_data *pgdat);

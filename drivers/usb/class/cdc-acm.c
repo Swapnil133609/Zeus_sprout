@@ -60,6 +60,8 @@ static struct acm *acm_table[ACM_TTY_MINORS];
 
 static DEFINE_MUTEX(acm_table_lock);
 
+#define MYDBG(fmt, args...) do {printk(KERN_WARNING "MTK_ICUSB [DBG], <%s(), %d> " fmt, __func__, __LINE__, ## args); }while(0)
+
 /*
  * acm_table accessors
  */

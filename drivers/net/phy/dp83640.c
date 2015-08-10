@@ -47,6 +47,7 @@
 #define CAL_EVENT	7
 #define CAL_TRIGGER	1
 #define PER_TRIGGER	6
+#define DP83640_N_PINS	12
 
 #define MII_DP83640_MICR 0x11
 #define MII_DP83640_MISR 0x12

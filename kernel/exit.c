@@ -70,6 +70,7 @@ static void __unhash_process(struct task_struct *p, bool group_dead)
 		detach_pid(p, PIDTYPE_SID);
 
 		list_del_rcu(&p->tasks);
+		delete_from_adj_tree(p);
 		list_del_init(&p->sibling);
 		__this_cpu_dec(process_counts);
 	}
@@ -712,12 +713,21 @@ static void check_stack_usage(void)
 static inline void check_stack_usage(void) {}
 #endif
 
+#ifdef CONFIG_SCHEDSTATS
+/* mt shceduler profiling*/
+extern void end_mtproc_info(struct task_struct *p);
+#endif
 void do_exit(long code)
 {
 	struct task_struct *tsk = current;
 	int group_dead;
 
 	profile_task_exit(tsk);
+#ifdef CONFIG_SCHEDSTATS
+	/* mt shceduler profiling*/
+	pr_debug("[%d:%s] exit\n", tsk->pid, tsk->comm);
+	end_mtproc_info(tsk);
+#endif
 
 	WARN_ON(blk_needs_flush_plug(tsk));
 
@@ -841,7 +851,7 @@ void do_exit(long code)
 	/*
 	 * Make sure we are holding no locks:
 	 */
-	debug_check_no_locks_held(tsk);
+	debug_check_no_locks_held();
 	/*
 	 * We can do this unlocked here. The futex code uses this flag
 	 * just to verify whether the pi state cleanup has been done

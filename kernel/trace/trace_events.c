@@ -254,6 +254,9 @@ static int __ftrace_event_enable_disable(struct ftrace_event_file *file,
 	int ret = 0;
 	int disable;
 
+    if(call->name && ((file->flags & FTRACE_EVENT_FL_ENABLED) ^ enable))
+        printk(KERN_INFO "[ftrace]event '%s' is %s\n", call->name, enable?"enabled":"disabled");
+
 	switch (enable) {
 	case 0:
 		/*
@@ -2392,6 +2395,7 @@ static __init int setup_trace_event(char *str)
 	return 1;
 }
 __setup("trace_event=", setup_trace_event);
+
 
 /* Expects to have event_mutex held when called */
 static int

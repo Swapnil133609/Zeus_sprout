@@ -30,6 +30,15 @@
 
 #include "xhci.h"
 
+#ifdef CONFIG_MTK_XHCI
+#include <asm/uaccess.h>
+#include <linux/dma-mapping.h>
+#include <linux/platform_device.h>
+#include <linux/xhci/xhci-mtk-scheduler.h>
+#include <linux/xhci/xhci-mtk-power.h>
+#include <linux/xhci/xhci-mtk.h>
+#endif
+
 #define DRIVER_AUTHOR "Sarah Sharp"
 #define DRIVER_DESC "'eXtensible' Host Controller (xHC) Driver"
 
@@ -140,6 +149,7 @@ static int xhci_start(struct xhci_hcd *xhci)
 				XHCI_MAX_HALT_USEC);
 	if (!ret)
 		xhci->xhc_state &= ~XHCI_STATE_HALTED;
+
 	return ret;
 }
 
@@ -521,6 +531,7 @@ int xhci_init(struct usb_hcd *hcd)
 	} else {
 		xhci_dbg(xhci, "xHCI doesn't need link TRB QUIRK\n");
 	}
+
 	retval = xhci_mem_init(xhci, GFP_KERNEL);
 	xhci_dbg(xhci, "Finished xhci_init\n");
 
@@ -593,6 +604,7 @@ static int xhci_run_finished(struct xhci_hcd *xhci)
 		xhci_halt(xhci);
 		return -ENODEV;
 	}
+
 	xhci->shared_hcd->state = HC_STATE_RUNNING;
 	xhci->cmd_ring_state = CMD_RING_STATE_RUNNING;
 
@@ -600,6 +612,13 @@ static int xhci_run_finished(struct xhci_hcd *xhci)
 		xhci_ring_cmd_db(xhci);
 
 	xhci_dbg(xhci, "Finished xhci_run for USB3 roothub\n");
+
+#ifdef CONFIG_MTK_XHCI
+#ifdef CONFIG_USB_MTK_DUALMODE
+    mtk_switch2device(true);
+#endif
+#endif
+
 	return 0;
 }
 
@@ -685,6 +704,14 @@ int xhci_run(struct usb_hcd *hcd)
 		xhci_queue_vendor_command(xhci, 0, 0, 0,
 				TRB_TYPE(TRB_NEC_GET_FW));
 
+#ifdef CONFIG_MTK_XHCI
+#ifdef CONFIG_USB_MTK_DUALMODE
+    mtk_xhci_eint_iddig_init();
+#else
+    enableXhciAllPortPower(xhci);
+#endif
+#endif
+
 	xhci_dbg(xhci, "Finished xhci_run for USB2 roothub\n");
 	return 0;
 }
@@ -746,10 +773,10 @@ void xhci_stop(struct usb_hcd *hcd)
 		xhci_dbg(xhci, "%s: compliance mode recovery timer deleted\n",
 				__func__);
 	}
-
+#ifndef CONFIG_MTK_XHCI
 	if (xhci->quirks & XHCI_AMD_PLL_FIX)
 		usb_amd_dev_put();
-
+#endif
 	xhci_dbg(xhci, "// Disabling event ring interrupts\n");
 	temp = xhci_readl(xhci, &xhci->op_regs->status);
 	xhci_writel(xhci, temp & ~STS_EINT, &xhci->op_regs->status);
@@ -1590,6 +1617,11 @@ int xhci_drop_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 	u32 drop_flag;
 	u32 new_add_flags, new_drop_flags, new_slot_info;
 	int ret;
+#ifdef CONFIG_MTK_XHCI
+	struct sch_ep *sch_ep = NULL;
+	int isTT;
+	int ep_type = 0;
+#endif
 
 	ret = xhci_check_args(hcd, udev, ep, 1, true, __func__);
 	if (ret <= 0)
@@ -1641,6 +1673,33 @@ int xhci_drop_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 
 	xhci_endpoint_zero(xhci, xhci->devs[udev->slot_id], ep);
 
+#ifdef CONFIG_MTK_XHCI
+	slot_ctx = xhci_get_slot_ctx(xhci, xhci->devs[udev->slot_id]->out_ctx);
+	if((slot_ctx->tt_info & 0xff) > 0){
+		isTT = 1;
+	}
+	else{
+		isTT = 0;
+	}
+	if(usb_endpoint_xfer_int(&ep->desc)){
+		ep_type = USB_EP_INT;
+	}
+	else if(usb_endpoint_xfer_isoc(&ep->desc)){
+		ep_type = USB_EP_ISOC;
+	}
+	else if(usb_endpoint_xfer_bulk(&ep->desc)){
+		ep_type = USB_EP_BULK;
+	}
+	sch_ep = mtk_xhci_scheduler_remove_ep(udev->speed, usb_endpoint_dir_in(&ep->desc)
+		, isTT, ep_type, (mtk_u32 *)ep);
+	if(sch_ep != NULL){
+		kfree(sch_ep);
+	}
+	else{
+		xhci_warn(xhci, "[MTK]Doesn't find ep_sch instance when removing endpoint\n");
+	}
+#endif
+
 	xhci_dbg(xhci, "drop ep 0x%x, slot id %d, new drop flags = %#x, new add flags = %#x, new slot info = %#x\n",
 			(unsigned int) ep->desc.bEndpointAddress,
 			udev->slot_id,
@@ -1676,6 +1735,16 @@ int xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 	u32 new_add_flags, new_drop_flags, new_slot_info;
 	struct xhci_virt_device *virt_dev;
 	int ret = 0;
+#ifdef CONFIG_MTK_XHCI
+	struct xhci_ep_ctx *in_ep_ctx;
+	struct sch_ep *sch_ep;
+	int isTT;
+	int ep_type = 0;
+	int maxp = 0;
+	int burst = 0;
+	int mult = 0;
+	int interval = 0;
+#endif
 
 	ret = xhci_check_args(hcd, udev, ep, 1, true, __func__);
 	if (ret <= 0) {
@@ -1737,6 +1806,46 @@ int xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 				__func__, ep->desc.bEndpointAddress);
 		return -ENOMEM;
 	}
+
+#ifdef CONFIG_MTK_XHCI
+	in_ep_ctx = xhci_get_ep_ctx(xhci, in_ctx, ep_index);
+	slot_ctx = xhci_get_slot_ctx(xhci, virt_dev->out_ctx);
+
+	if((slot_ctx->tt_info & 0xff) > 0){
+		isTT = 1;
+	}
+	else{
+		isTT = 0;
+	}
+	if(usb_endpoint_xfer_int(&ep->desc)){
+		ep_type = USB_EP_INT;
+	}
+	else if(usb_endpoint_xfer_isoc(&ep->desc)){
+		ep_type = USB_EP_ISOC;
+	}
+	else if(usb_endpoint_xfer_bulk(&ep->desc)){
+		ep_type = USB_EP_BULK;
+	}
+	if(udev->speed == USB_SPEED_FULL || udev->speed == USB_SPEED_HIGH
+		|| udev->speed == USB_SPEED_LOW){
+		maxp = ep->desc.wMaxPacketSize & 0x7FF;
+		burst = ep->desc.wMaxPacketSize >> 11;
+		mult = 0;
+	}
+	else if(udev->speed == USB_SPEED_SUPER){
+		maxp = ep->desc.wMaxPacketSize & 0x7FF;
+		burst = ep->ss_ep_comp.bMaxBurst;
+		mult = ep->ss_ep_comp.bmAttributes & 0x3;
+	}
+	interval = (1 << ((in_ep_ctx->ep_info >> 16) & 0xff));
+	sch_ep = kmalloc(sizeof(struct sch_ep), GFP_KERNEL);
+	if(mtk_xhci_scheduler_add_ep(udev->speed, usb_endpoint_dir_in(&ep->desc),
+		isTT, ep_type, maxp, interval, burst, mult, (mtk_u32 *)ep
+		, (mtk_u32 *)in_ep_ctx, sch_ep) != SCH_SUCCESS){
+		xhci_err(xhci, "[MTK] not enough bandwidth\n");
+		return -ENOSPC;
+	}
+#endif
 
 	ctrl_ctx->add_flags |= cpu_to_le32(added_ctxs);
 	new_add_flags = le32_to_cpu(ctrl_ctx->add_flags);
@@ -4693,6 +4802,13 @@ int xhci_gen_setup(struct usb_hcd *hcd, xhci_get_quirks_t get_quirks)
 		 * companion controller.
 		 */
 		hcd->has_tt = 1;
+
+        #ifdef CONFIG_MTK_XHCI
+        #ifdef CONFIG_USB_MTK_DUALMODE
+        mtk_xhci_set(xhci);
+        #endif
+        #endif
+
 	} else {
 		/* xHCI private pointer was set in xhci_pci_probe for the second
 		 * registered roothub.
@@ -4781,6 +4897,7 @@ static int __init xhci_hcd_init(void)
 		printk(KERN_DEBUG "Problem registering platform driver.");
 		goto unreg_pci;
 	}
+
 	/*
 	 * Check the compiler generated sizes of structures that must be laid
 	 * out in specific ways for hardware access.

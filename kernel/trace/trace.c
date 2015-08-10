@@ -38,6 +38,7 @@
 #include <linux/poll.h>
 #include <linux/nmi.h>
 #include <linux/fs.h>
+
 #include <linux/sched/rt.h>
 
 #include "trace.h"
@@ -430,6 +431,9 @@ int __trace_puts(unsigned long ip, const char *str, int size)
 	if (unlikely(tracing_selftest_running || tracing_disabled))
 		return 0;
 
+	if (unlikely(tracing_selftest_running || tracing_disabled))
+		return 0;
+
 	alloc = sizeof(*entry) + size + 2; /* possible \n added */
 
 	local_save_flags(irq_flags);
@@ -473,6 +477,9 @@ int __trace_bputs(unsigned long ip, const char *str)
 	int pc;
 
 	pc = preempt_count();
+
+	if (unlikely(tracing_selftest_running || tracing_disabled))
+		return 0;
 
 	if (unlikely(tracing_selftest_running || tracing_disabled))
 		return 0;
@@ -730,6 +737,7 @@ static const char *trace_options[] = {
 	"irq-info",
 	"markers",
 	"function-trace",
+	"print-tgid",
 	NULL
 };
 
@@ -1200,6 +1208,7 @@ void tracing_reset(struct trace_buffer *buf, int cpu)
 	synchronize_sched();
 	ring_buffer_reset_cpu(buffer, cpu);
 
+    printk(KERN_INFO "[ftrace]cpu %d trace reset\n", cpu);
 	ring_buffer_record_enable(buffer);
 }
 
@@ -1221,6 +1230,7 @@ void tracing_reset_online_cpus(struct trace_buffer *buf)
 	for_each_online_cpu(cpu)
 		ring_buffer_reset_cpu(buffer, cpu);
 
+    printk(KERN_INFO "[ftrace]all cpu trace reset\n");
 	ring_buffer_record_enable(buffer);
 }
 
@@ -1242,6 +1252,7 @@ void tracing_reset_all_online_cpus(void)
 static unsigned map_pid_to_cmdline[PID_MAX_DEFAULT+1];
 static unsigned map_cmdline_to_pid[SAVED_CMDLINES];
 static char saved_cmdlines[SAVED_CMDLINES][TASK_COMM_LEN];
+static unsigned saved_tgids[SAVED_CMDLINES];
 static int cmdline_idx;
 static arch_spinlock_t trace_cmdline_lock = __ARCH_SPIN_LOCK_UNLOCKED;
 
@@ -1285,6 +1296,7 @@ void tracing_start(void)
 {
 	struct ring_buffer *buffer;
 	unsigned long flags;
+    int reset_ftrace = 0;
 
 	if (tracing_disabled)
 		return;
@@ -1295,9 +1307,12 @@ void tracing_start(void)
 			/* Someone screwed up their debugging */
 			WARN_ON_ONCE(1);
 			global_trace.stop_count = 0;
+            reset_ftrace = 1;
 		}
 		goto out;
-	}
+	}else
+        reset_ftrace = 1;
+
 
 	/* Prevent the buffers from switching */
 	arch_spin_lock(&ftrace_max_lock);
@@ -1443,6 +1458,7 @@ static int trace_save_cmdline(struct task_struct *tsk)
 	}
 
 	memcpy(&saved_cmdlines[idx], tsk->comm, TASK_COMM_LEN);
+	saved_tgids[idx] = tsk->tgid;
 
 	arch_spin_unlock(&trace_cmdline_lock);
 
@@ -1478,6 +1494,25 @@ void trace_find_cmdline(int pid, char comm[])
 
 	arch_spin_unlock(&trace_cmdline_lock);
 	preempt_enable();
+}
+
+int trace_find_tgid(int pid)
+{
+	unsigned map;
+	int tgid;
+
+	preempt_disable();
+	arch_spin_lock(&trace_cmdline_lock);
+	map = map_pid_to_cmdline[pid];
+	if (map != NO_CMDLINE_MAP)
+		tgid = saved_tgids[map];
+	else
+		tgid = -1;
+
+	arch_spin_unlock(&trace_cmdline_lock);
+	preempt_enable();
+
+	return tgid;
 }
 
 void tracing_record_cmdline(struct task_struct *tsk)
@@ -1936,7 +1971,8 @@ void trace_printk_init_buffers(void)
 	pr_info("ftrace: Allocated trace_printk buffers\n");
 
 	/* Expand the buffers to set size */
-	tracing_update_buffers();
+    /* M: avoid to expand buffer because of trace_printk in kernel */
+	/* tracing_update_buffers(); */
 
 	buffers_allocated = 1;
 
@@ -2435,6 +2471,13 @@ static void print_func_help_header(struct trace_buffer *buf, struct seq_file *m)
 	seq_puts(m, "#              | |       |          |         |\n");
 }
 
+static void print_func_help_header_tgid(struct trace_buffer *buf, struct seq_file *m)
+{
+	print_event_info(buf, m);
+	seq_puts(m, "#           TASK-PID    TGID   CPU#      TIMESTAMP  FUNCTION\n");
+	seq_puts(m, "#              | |        |      |          |         |\n");
+}
+
 static void print_func_help_header_irq(struct trace_buffer *buf, struct seq_file *m)
 {
 	print_event_info(buf, m);
@@ -2445,6 +2488,18 @@ static void print_func_help_header_irq(struct trace_buffer *buf, struct seq_file
 	seq_puts(m, "#                            ||| /     delay\n");
 	seq_puts(m, "#           TASK-PID   CPU#  ||||    TIMESTAMP  FUNCTION\n");
 	seq_puts(m, "#              | |       |   ||||       |         |\n");
+}
+
+static void print_func_help_header_irq_tgid(struct trace_buffer *buf, struct seq_file *m)
+{
+	print_event_info(buf, m);
+	seq_puts(m, "#                                      _-----=> irqs-off\n");
+	seq_puts(m, "#                                     / _----=> need-resched\n");
+	seq_puts(m, "#                                    | / _---=> hardirq/softirq\n");
+	seq_puts(m, "#                                    || / _--=> preempt-depth\n");
+	seq_puts(m, "#                                    ||| /     delay\n");
+	seq_puts(m, "#           TASK-PID    TGID   CPU#  ||||    TIMESTAMP  FUNCTION\n");
+	seq_puts(m, "#              | |        |      |   ||||       |         |\n");
 }
 
 void
@@ -2747,9 +2802,15 @@ void trace_default_header(struct seq_file *m)
 	} else {
 		if (!(trace_flags & TRACE_ITER_VERBOSE)) {
 			if (trace_flags & TRACE_ITER_IRQ_INFO)
-				print_func_help_header_irq(iter->trace_buffer, m);
+				if (trace_flags & TRACE_ITER_TGID)
+					print_func_help_header_irq_tgid(iter->trace_buffer, m);
+				else
+					print_func_help_header_irq(iter->trace_buffer, m);
 			else
-				print_func_help_header(iter->trace_buffer, m);
+				if (trace_flags & TRACE_ITER_TGID)
+					print_func_help_header_tgid(iter->trace_buffer, m);
+				else
+					print_func_help_header(iter->trace_buffer, m);
 		}
 	}
 }
@@ -3015,6 +3076,7 @@ static int tracing_release(struct inode *inode, struct file *file)
 	if (iter->trace && iter->trace->close)
 		iter->trace->close(iter);
 
+    printk(KERN_INFO "[ftrace]end reading trace file\n");
 	if (!iter->snapshot)
 		/* reenable tracing if it was previously enabled */
 		tracing_start_tr(tr);
@@ -3069,6 +3131,7 @@ static int tracing_open(struct inode *inode, struct file *file)
 	}
 
 	if (file->f_mode & FMODE_READ) {
+        printk(KERN_INFO "[ftrace]start reading trace file\n");
 		iter = __tracing_open(inode, file, false);
 		if (IS_ERR(iter))
 			ret = PTR_ERR(iter);
@@ -3601,9 +3664,53 @@ tracing_saved_cmdlines_read(struct file *file, char __user *ubuf,
 }
 
 static const struct file_operations tracing_saved_cmdlines_fops = {
-    .open       = tracing_open_generic,
-    .read       = tracing_saved_cmdlines_read,
-    .llseek	= generic_file_llseek,
+	.open	= tracing_open_generic,
+	.read	= tracing_saved_cmdlines_read,
+	.llseek	= generic_file_llseek,
+};
+
+static ssize_t
+tracing_saved_tgids_read(struct file *file, char __user *ubuf,
+				size_t cnt, loff_t *ppos)
+{
+	char *file_buf;
+	char *buf;
+	int len = 0;
+	int pid;
+	int i;
+
+	file_buf = kmalloc(SAVED_CMDLINES*(16+1+16), GFP_KERNEL);
+	if (!file_buf)
+		return -ENOMEM;
+
+	buf = file_buf;
+
+	for (i = 0; i < SAVED_CMDLINES; i++) {
+		int tgid;
+		int r;
+
+		pid = map_cmdline_to_pid[i];
+		if (pid == -1 || pid == NO_CMDLINE_MAP)
+			continue;
+
+		tgid = trace_find_tgid(pid);
+		r = sprintf(buf, "%d %d\n", pid, tgid);
+		buf += r;
+		len += r;
+	}
+
+	len = simple_read_from_buffer(ubuf, cnt, ppos,
+				      file_buf, len);
+
+	kfree(file_buf);
+
+	return len;
+}
+
+static const struct file_operations tracing_saved_tgids_fops = {
+	.open	= tracing_open_generic,
+	.read	= tracing_saved_tgids_read,
+	.llseek	= generic_file_llseek,
 };
 
 static ssize_t
@@ -3729,7 +3836,7 @@ static int __tracing_resize_ring_buffer(struct trace_array *tr,
 	return ret;
 }
 
-static ssize_t tracing_resize_ring_buffer(struct trace_array *tr,
+ssize_t tracing_resize_ring_buffer(struct trace_array *tr,
 					  unsigned long size, int cpu_id)
 {
 	int ret = size;
@@ -3753,7 +3860,6 @@ out:
 
 	return ret;
 }
-
 
 /**
  * tracing_update_buffers - used by tracing facility to expand ring buffers
@@ -3892,6 +3998,7 @@ tracing_set_trace_write(struct file *filp, const char __user *ubuf,
 	for (i = cnt - 1; i > 0 && isspace(buf[i]); i--)
 		buf[i] = 0;
 
+    printk(KERN_INFO "[ftrace]set current_tracer to '%s'\n", buf);
 	err = tracing_set_tracer(buf);
 	if (err)
 		return err;
@@ -5853,6 +5960,8 @@ rb_simple_write(struct file *filp, const char __user *ubuf,
 		return ret;
 
 	if (buffer) {
+        if(ring_buffer_record_is_on(buffer) ^ val)
+            printk(KERN_INFO "[ftrace]tracing_on is toggled to %lu\n", val);
 		mutex_lock(&trace_types_lock);
 		if (val) {
 			tracer_tracing_on(tr);
@@ -6157,6 +6266,9 @@ init_tracer_debugfs(struct trace_array *tr, struct dentry *d_tracer)
 	trace_create_file("trace_marker", 0220, d_tracer,
 			  tr, &tracing_mark_fops);
 
+	trace_create_file("saved_tgids", 0444, d_tracer,
+			  tr, &tracing_saved_tgids_fops);
+
 	trace_create_file("trace_clock", 0644, d_tracer, tr,
 			  &trace_clock_fops);
 
@@ -6415,7 +6527,7 @@ __init static int tracer_alloc_buffers(void)
 	/* Only allocate trace_printk buffers if a trace_printk exists */
 	if (__stop___trace_bprintk_fmt != __start___trace_bprintk_fmt)
 		/* Must be called before global_trace.buffer is allocated */
-		trace_printk_init_buffers();
+        trace_printk_init_buffers();
 
 	/* To save memory, keep the ring buffer size to its minimum */
 	if (ring_buffer_expanded)

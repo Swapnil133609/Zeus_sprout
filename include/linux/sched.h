@@ -54,6 +54,7 @@ struct sched_param {
 #include <linux/gfp.h>
 
 #include <asm/processor.h>
+#include <linux/rtpm_prio.h>
 
 struct exec_domain;
 struct futex_pi_state;
@@ -102,8 +103,10 @@ extern unsigned long nr_running(void);
 extern unsigned long nr_iowait(void);
 extern unsigned long nr_iowait_cpu(int cpu);
 extern unsigned long this_cpu_load(void);
-
-
+extern unsigned long get_cpu_load(int cpu);
+extern unsigned long long mt_get_thread_cputime(pid_t pid);
+extern unsigned long long mt_get_cpu_idle(int cpu);
+extern unsigned long long mt_sched_clock(void);
 extern void calc_global_load(unsigned long ticks);
 extern void update_cpu_load_nohz(void);
 
@@ -128,6 +131,10 @@ extern void proc_sched_set_task(struct task_struct *p);
 extern void
 print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq);
 #endif
+
+#define VMACACHE_BITS 2
+#define VMACACHE_SIZE (1U << VMACACHE_BITS)
+#define VMACACHE_MASK (VMACACHE_SIZE - 1)
 
 /*
  * Task state bitmask. NOTE! These bits are also
@@ -974,6 +981,15 @@ struct sched_statistics {
 };
 #endif
 
+#ifdef CONFIG_MTPROF_CPUTIME
+struct mtk_isr_info{
+	int     isr_num;
+	int	 isr_count;
+	u64   isr_time;
+	char *isr_name;
+	struct mtk_isr_info *next;
+} ;
+#endif
 struct sched_entity {
 	struct load_weight	load;		/* for load-balancing */
 	struct rb_node		run_node;
@@ -1007,6 +1023,11 @@ struct sched_entity {
 #if defined(CONFIG_SMP) && defined(CONFIG_FAIR_GROUP_SCHED)
 	/* Per-entity load-tracking */
 	struct sched_avg	avg;
+#endif
+#ifdef CONFIG_MTPROF_CPUTIME
+	u64			mtk_isr_time;
+	int			mtk_isr_count;
+	struct mtk_isr_info  *mtk_isr;
 #endif
 };
 
@@ -1046,6 +1067,9 @@ struct task_struct {
 #ifdef CONFIG_SMP
 	struct llist_node wake_entry;
 	int on_cpu;
+	struct task_struct *last_wakee;
+	unsigned long wakee_flips;
+	unsigned long wakee_flip_decay_ts;
 #endif
 	int on_rq;
 
@@ -1097,6 +1121,9 @@ struct task_struct {
 #endif
 
 	struct list_head tasks;
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
+	struct rb_node adj_node;
+#endif
 #ifdef CONFIG_SMP
 	struct plist_node pushable_tasks;
 #endif
@@ -1105,6 +1132,9 @@ struct task_struct {
 #ifdef CONFIG_COMPAT_BRK
 	unsigned brk_randomized:1;
 #endif
+	/* per-thread vma caching */
+	u32 vmacache_seqnum;
+	struct vm_area_struct *vmacache[VMACACHE_SIZE];
 #if defined(SPLIT_RSS_COUNTING)
 	struct task_rss_stat	rss_stat;
 #endif
@@ -1122,12 +1152,11 @@ struct task_struct {
 				 * execve */
 	unsigned in_iowait:1;
 
-	/* task may not gain privileges */
-	unsigned no_new_privs:1;
-
 	/* Revert to default priority/policy when forking */
 	unsigned sched_reset_on_fork:1;
 	unsigned sched_contributes_to_load:1;
+
+	unsigned long atomic_flags; /* Flags needing atomic access. */
 
 	pid_t pid;
 	pid_t tgid;
@@ -1186,6 +1215,10 @@ struct task_struct {
 	struct timespec real_start_time;	/* boot based time */
 /* mm fault and swap info: this can arguably be seen as either mm-specific or thread-specific */
 	unsigned long min_flt, maj_flt;
+/* for thrashing accounting */
+#ifdef CONFIG_ZRAM
+    unsigned long fm_flt, swap_in, swap_out;
+#endif
 
 	struct task_cputime cputime_expires;
 	struct list_head cpu_timers[3];
@@ -1455,6 +1488,14 @@ static inline struct pid *task_tgid(struct task_struct *task)
 	return task->group_leader->pids[PIDTYPE_PID].pid;
 }
 
+#ifdef CONFIG_ANDROID_LMK_ADJ_RBTREE
+extern void add_2_adj_tree(struct task_struct *task);
+extern void delete_from_adj_tree(struct task_struct *task);
+#else
+static inline void add_2_adj_tree(struct task_struct *task) { }
+static inline void delete_from_adj_tree(struct task_struct *task) { }
+#endif
+
 /*
  * Without tasklist or rcu lock it is not safe to dereference
  * the result of task_pgrp/task_session even if task == current,
@@ -1618,6 +1659,9 @@ static inline cputime_t task_gtime(struct task_struct *t)
 extern void task_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st);
 extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, cputime_t *st);
 
+extern int task_free_register(struct notifier_block *n);
+extern int task_free_unregister(struct notifier_block *n);
+
 /*
  * Per process flags
  */
@@ -1650,6 +1694,9 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut, 
 #define PF_MEMPOLICY	0x10000000	/* Non-default NUMA mempolicy */
 #define PF_MUTEX_TESTER	0x20000000	/* Thread belongs to the rt mutex tester */
 #define PF_FREEZER_SKIP	0x40000000	/* Freezer should not count it as freezable */
+#define PF_MTKPASR	0x80000000	/* I am in MTKPASR process */
+
+#define task_in_mtkpasr(task)	unlikely(task->flags & PF_MTKPASR)
 
 /*
  * Only the _current_ task can read/write to tsk->flags, but other
@@ -1696,6 +1743,19 @@ static inline unsigned int memalloc_noio_save(void)
 static inline void memalloc_noio_restore(unsigned int flags)
 {
 	current->flags = (current->flags & ~PF_MEMALLOC_NOIO) | flags;
+}
+
+/* Per-process atomic flags. */
+#define PFA_NO_NEW_PRIVS 0x00000001	/* May not gain new privileges. */
+
+static inline bool task_no_new_privs(struct task_struct *p)
+{
+	return test_bit(PFA_NO_NEW_PRIVS, &p->atomic_flags);
+}
+
+static inline void task_set_no_new_privs(struct task_struct *p)
+{
+	set_bit(PFA_NO_NEW_PRIVS, &p->atomic_flags);
 }
 
 /*
@@ -1909,10 +1969,12 @@ extern int task_nice(const struct task_struct *p);
 extern int can_nice(const struct task_struct *p, const int nice);
 extern int task_curr(const struct task_struct *p);
 extern int idle_cpu(int cpu);
+extern int idle_cpu_relaxed(int cpu);
 extern int sched_setscheduler(struct task_struct *, int,
 			      const struct sched_param *);
 extern int sched_setscheduler_nocheck(struct task_struct *, int,
 				      const struct sched_param *);
+
 extern struct task_struct *idle_task(int cpu);
 /**
  * is_idle_task - is the specified task an idle task?
@@ -2398,6 +2460,23 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
 	return unlikely(test_tsk_thread_flag(tsk,TIF_NEED_RESCHED));
 }
 
+#if defined(CONFIG_MT_RT_SCHED) || defined(CONFIG_MT_RT_SCHED_LOG)
+static inline void set_tsk_need_released(struct task_struct *tsk)
+{
+	set_tsk_thread_flag(tsk, TIF_NEED_RELEASED);
+}
+
+static inline void clear_tsk_need_released(struct task_struct *tsk)
+{
+	clear_tsk_thread_flag(tsk,TIF_NEED_RELEASED);
+}
+
+static inline int test_tsk_need_released(struct task_struct *tsk)
+{
+	return unlikely(test_tsk_thread_flag(tsk,TIF_NEED_RELEASED));
+}
+#endif
+
 static inline int restart_syscall(void)
 {
 	set_tsk_thread_flag(current, TIF_SIGPENDING);
@@ -2643,6 +2722,8 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
 
 #endif /* CONFIG_SMP */
 
+extern struct atomic_notifier_head migration_notifier_head;
+
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
 
@@ -2729,5 +2810,31 @@ static inline unsigned long rlimit_max(unsigned int limit)
 {
 	return task_rlimit_max(current, limit);
 }
+
+#ifdef CONFIG_MTK_SCHED_RQAVG_US
+/*
+ * @cpu: cpu id
+ * @reset: reset the statistic start time after this time query
+ * @use_maxfreq: caculate cpu loading with max cpu max frequency
+ * return: cpu loading as percentage (0~100)
+ */
+extern unsigned int sched_get_percpu_load(int cpu, bool reset, bool use_maxfreq);
+
+/*
+ * return: heavy task(loading>90%) number in the system
+ */
+extern unsigned int sched_get_nr_heavy_task(void);
+
+/*
+ * @threshold: heavy task loading threshold (0~1023)
+ * return: heavy task(loading>threshold) number in the system
+ */
+extern unsigned int sched_get_nr_heavy_task_by_threshold(unsigned int threshold);
+#endif /* CONFIG_MTK_SCHED_RQAVG_US */
+
+#ifdef CONFIG_MTK_SCHED_RQAVG_KS
+extern void sched_update_nr_prod(int cpu, unsigned long nr, bool inc);
+extern void sched_get_nr_running_avg(int *avg, int *iowait_avg);
+#endif /* CONFIG_MTK_SCHED_RQAVG_KS */
 
 #endif

@@ -20,6 +20,9 @@
 #include <linux/profile.h>
 #include <linux/sched.h>
 #include <linux/module.h>
+#ifdef CONFIG_MTK_SCHED_RQAVG_US
+#include <linux/rq_stats.h>
+#endif
 #include <linux/irq_work.h>
 #include <linux/posix-timers.h>
 #include <linux/perf_event.h>
@@ -29,6 +32,12 @@
 #include "tick-internal.h"
 
 #include <trace/events/timer.h>
+
+#ifdef CONFIG_MTK_SCHED_RQAVG_US
+struct rq_data rq_info;
+struct workqueue_struct *rq_wq;
+spinlock_t rq_lock;
+#endif
 
 /*
  * Per cpu nohz control structure
@@ -421,7 +430,7 @@ update_ts_time_stats(int cpu, struct tick_sched *ts, ktime_t now, u64 *last_upda
 {
 	ktime_t delta;
 
-	if (ts->idle_active) {
+	if (ts->idle_active && cpu_online(cpu)) {
 		delta = ktime_sub(now, ts->idle_entrytime);
 		if (nr_iowait_cpu(cpu) > 0)
 			ts->iowait_sleeptime = ktime_add(ts->iowait_sleeptime, delta);
@@ -451,6 +460,7 @@ static ktime_t tick_nohz_start_idle(int cpu, struct tick_sched *ts)
 
 	ts->idle_entrytime = now;
 	ts->idle_active = 1;
+
 	sched_clock_idle_sleep_event();
 	return now;
 }
@@ -482,7 +492,7 @@ u64 get_cpu_idle_time_us(int cpu, u64 *last_update_time)
 		update_ts_time_stats(cpu, ts, now, last_update_time);
 		idle = ts->idle_sleeptime;
 	} else {
-		if (ts->idle_active && !nr_iowait_cpu(cpu)) {
+		if (ts->idle_active && !nr_iowait_cpu(cpu) && cpu_online(cpu)) {
 			ktime_t delta = ktime_sub(now, ts->idle_entrytime);
 
 			idle = ktime_add(ts->idle_sleeptime, delta);
@@ -523,7 +533,7 @@ u64 get_cpu_iowait_time_us(int cpu, u64 *last_update_time)
 		update_ts_time_stats(cpu, ts, now, last_update_time);
 		iowait = ts->iowait_sleeptime;
 	} else {
-		if (ts->idle_active && nr_iowait_cpu(cpu) > 0) {
+		if (ts->idle_active && nr_iowait_cpu(cpu) > 0 && cpu_online(cpu)) {
 			ktime_t delta = ktime_sub(now, ts->idle_entrytime);
 
 			iowait = ktime_add(ts->iowait_sleeptime, delta);
@@ -1079,6 +1089,51 @@ void tick_check_idle(int cpu)
  * High resolution timer specific code
  */
 #ifdef CONFIG_HIGH_RES_TIMERS
+
+#ifdef CONFIG_MTK_SCHED_RQAVG_US
+static void update_rq_stats(void)
+{
+	unsigned long jiffy_gap = 0;
+	unsigned int rq_avg = 0;
+	unsigned long flags = 0;
+
+    spin_lock_irqsave(&rq_lock, flags);
+
+	jiffy_gap = jiffies - rq_info.rq_poll_last_jiffy;
+	if (jiffy_gap >= rq_info.rq_poll_jiffies) {
+		if (!rq_info.rq_avg)
+			rq_info.rq_poll_total_jiffies = 0;
+
+		rq_avg = nr_running() * 10;
+
+		if (rq_info.rq_poll_total_jiffies) {
+			rq_avg = (rq_avg * jiffy_gap) +
+				(rq_info.rq_avg *
+				 rq_info.rq_poll_total_jiffies);
+			do_div(rq_avg,
+			       rq_info.rq_poll_total_jiffies + jiffy_gap);
+		}
+
+		rq_info.rq_avg =  rq_avg;
+		rq_info.rq_poll_total_jiffies += jiffy_gap;
+		rq_info.rq_poll_last_jiffy = jiffies;
+	}
+
+    spin_unlock_irqrestore(&rq_lock, flags);
+}
+
+static void wakeup_user(void)
+{
+	unsigned long jiffy_gap;
+
+	jiffy_gap = jiffies - rq_info.def_timer_last_jiffy;
+
+	if (jiffy_gap >= rq_info.def_timer_jiffies) {
+		rq_info.def_timer_last_jiffy = jiffies;
+		queue_work(rq_wq, &rq_info.def_timer_work);
+	}
+}
+#endif /* CONFIG_MTK_SCHED_RQAVG_US */
 /*
  * We rearm the timer until we get disabled by the idle code.
  * Called with interrupts disabled.
@@ -1098,6 +1153,21 @@ static enum hrtimer_restart tick_sched_timer(struct hrtimer *timer)
 	 */
 	if (regs)
 		tick_sched_handle(ts, regs);
+
+#ifdef CONFIG_MTK_SCHED_RQAVG_US
+		if ((rq_info.init == 1) && (tick_do_timer_cpu == smp_processor_id())) {
+
+			/*
+			 * update run queue statistics
+			 */
+			update_rq_stats();
+
+			/*
+			 * wakeup user if needed
+			 */
+			wakeup_user();
+		}
+#endif /* CONFIG_MTK_SCHED_RQAVG_US */
 
 	hrtimer_forward(timer, now, tick_period);
 

@@ -34,6 +34,7 @@
 #include <asm/unwind.h>
 #include <asm/tls.h>
 #include <asm/system_misc.h>
+#include <linux/aee.h>
 
 static const char *handler[]= {
 	"prefetch abort",
@@ -61,7 +62,7 @@ static void dump_mem(const char *, const char *, unsigned long, unsigned long);
 void dump_backtrace_entry(unsigned long where, unsigned long from, unsigned long frame)
 {
 #ifdef CONFIG_KALLSYMS
-	printk("[<%08lx>] (%pS) from [<%08lx>] (%pS)\n", where, (void *)where, from, (void *)from);
+	printk("[<%08lx>] (%ps) from [<%08lx>] (%pS)\n", where, (void *)where, from, (void *)from);
 #else
 	printk("Function entered at [<%08lx>] from [<%08lx>]\n", where, from);
 #endif
@@ -208,6 +209,13 @@ static void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 }
 #endif
 
+void dump_stack(void)
+{
+	dump_backtrace(NULL, NULL);
+}
+
+EXPORT_SYMBOL(dump_stack);
+
 void show_stack(struct task_struct *tsk, unsigned long *sp)
 {
 	dump_backtrace(NULL, tsk);
@@ -242,7 +250,7 @@ static int __die(const char *str, int err, struct pt_regs *regs)
 	/* trap and error numbers are mostly meaningless on ARM */
 	ret = notify_die(DIE_OOPS, str, regs, err, tsk->thread.trap_no, SIGSEGV);
 	if (ret == NOTIFY_STOP)
-		return 1;
+        return ret;
 
 	print_modules();
 	__show_regs(regs);
@@ -298,7 +306,8 @@ static void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
 	if (!die_nest_count)
 		/* Nest count reaches zero, release the lock. */
 		arch_spin_unlock(&die_lock);
-	raw_local_irq_restore(flags);
+	/* not enable irq incase softirq many turn off msdc clock */
+	//raw_local_irq_restore(flags);
 	oops_exit();
 
 	if (in_interrupt())
@@ -401,9 +410,22 @@ static int call_undef_hook(struct pt_regs *regs, unsigned int instr)
 
 asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
 {
+	struct thread_info *thread = current_thread_info();
+	int ret;
 	unsigned int instr;
 	siginfo_t info;
 	void __user *pc;
+
+	if (!user_mode(regs)) {
+		thread->cpu_excp++;
+		if (thread->cpu_excp == 1) {
+			thread->regs_on_excp = (void *)regs;
+			aee_excp_regs = (void*)regs;
+		}
+		if (thread->cpu_excp >= 2) {
+			aee_stop_nested_panic(regs);
+		}
+	}
 
 	pc = (void __user *)instruction_pointer(regs);
 
@@ -432,8 +454,13 @@ asmlinkage void __exception do_undefinstr(struct pt_regs *regs)
 		goto die_sig;
 	}
 
-	if (call_undef_hook(regs, instr) == 0)
+	ret = call_undef_hook(regs, instr);
+	if (ret == 0) {
+		if (!user_mode(regs)) {
+			thread->cpu_excp--;
+		}	  
 		return;
+	}
 
 die_sig:
 #ifdef CONFIG_DEBUG_USER
@@ -450,7 +477,7 @@ die_sig:
 	info.si_addr  = pc;
 
 	arm_notify_die("Oops - undefined instruction", regs, &info, 0, 6);
-}
+	}
 
 asmlinkage void do_unexp_fiq (struct pt_regs *regs)
 {

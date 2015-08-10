@@ -513,6 +513,8 @@ int kthread_worker_fn(void *worker_ptr)
 
 	WARN_ON(worker->task);
 	worker->task = current;
+	set_freezable();
+
 repeat:
 	set_current_state(TASK_INTERRUPTIBLE);	/* mb paired w/ kthread_stop */
 
@@ -554,7 +556,7 @@ static void insert_kthread_work(struct kthread_worker *worker,
 
 	list_add_tail(&work->node, pos);
 	work->worker = worker;
-	if (likely(worker->task))
+	if (!worker->current_work && likely(worker->task))
 		wake_up_process(worker->task);
 }
 

@@ -7,6 +7,7 @@ config ARM
 	select ARCH_SUPPORTS_ATOMIC_RMW
 	select ARCH_HAS_TICK_BROADCAST if GENERIC_CLOCKEVENTS_BROADCAST
 	select ARCH_WANT_IPC_PARSE_VERSION
+	select ARM_HAS_SG_CHAIN if (ARCH_MT6589 || ARCH_MT6582 || ARCH_MT6572 || ARCH_MT8135 || ARCH_MT6595)
 	select BUILDTIME_EXTABLE_SORT if MMU
 	select CPU_PM if (SUSPEND || CPU_IDLE)
 	select DCACHE_WORD_ACCESS if (CPU_V6 || CPU_V6K || CPU_V7) && !CPU_BIG_ENDIAN && MMU
@@ -15,6 +16,7 @@ config ARM
 	select GENERIC_IRQ_PROBE
 	select GENERIC_IRQ_SHOW
 	select GENERIC_PCI_IOMAP
+	select GENERIC_SCHED_CLOCK
 	select GENERIC_SMP_IDLE_THREAD
 	select GENERIC_IDLE_POLL_SETUP
 	select GENERIC_STRNCPY_FROM_USER
@@ -40,6 +42,7 @@ config ARM
 	select HAVE_IDE if PCI || ISA || PCMCIA
 	select HAVE_IRQ_TIME_ACCOUNTING
 	select HAVE_KERNEL_GZIP
+	select HAVE_KERNEL_LZ4
 	select HAVE_KERNEL_LZMA
 	select HAVE_KERNEL_LZO
 	select HAVE_KERNEL_XZ
@@ -61,6 +64,7 @@ config ARM
 	select OLD_SIGSUSPEND3
 	select OLD_SIGACTION
 	select HAVE_CONTEXT_TRACKING
+	select HAVE_VIRT_CPU_ACCOUNTING
 	help
 	  The ARM series is a line of low-power-consumption RISC chip designs
 	  licensed by ARM Ltd and targeted at embedded applications and
@@ -157,10 +161,9 @@ config TRACE_IRQFLAGS_SUPPORT
 
 config RWSEM_GENERIC_SPINLOCK
 	bool
-	default y
 
 config RWSEM_XCHGADD_ALGORITHM
-	bool
+	def_bool y
 
 config ARCH_HAS_ILOG2_U32
 	bool
@@ -633,6 +636,22 @@ config ARCH_MSM
 	  stack and controls some vital subsystems
 	  (clock and power control, etc).
 
+config ARCH_MT6582
+	bool "MediaTek MT6582"
+	select GENERIC_TIME
+	select GENERIC_CLOCKEVENTS
+	select ARCH_HAS_CPUFREQ
+	select ARM_AMBA
+	select CPU_V7
+	select HAVE_SMP
+	select NEED_MACH_MEMORY_H
+	select FIQ_GLUE
+	select IRQ_DOMAIN
+	select IRQ_DOMAIN_DEBUG
+	select ARCH_REQUIRE_GPIOLIB
+	help
+	  This enable support for MediaTek MT6595
+
 config ARCH_SHMOBILE
 	bool "Renesas SH-Mobile / R-Mobile"
 	select CLKDEV_LOOKUP
@@ -954,6 +973,10 @@ source "arch/arm/mach-kirkwood/Kconfig"
 source "arch/arm/mach-ks8695/Kconfig"
 
 source "arch/arm/mach-msm/Kconfig"
+
+if ARCH_MT6582
+source "arch/arm/mach-mt6582/Kconfig"
+endif
 
 source "arch/arm/mach-mv78xx0/Kconfig"
 
@@ -1360,6 +1383,7 @@ config ARM_ERRATA_798181
 endmenu
 
 source "arch/arm/common/Kconfig"
+source "arch/arm/hotplug/Kconfig"
 
 menu "Bus support"
 
@@ -1572,6 +1596,7 @@ config LOCAL_TIMERS
 	bool "Use local timer interrupts"
 	depends on SMP
 	default y
+	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT && !ARCH_MT6589 && !ARCH_MT6582 && !ARCH_MT8135 && !ARCH_MT6592 && !ARCH_MT6595)
 	help
 	  Enable support for local timers on SMP platforms, rather then the
 	  legacy IPI broadcast method.  Local timers allows the system
@@ -1820,6 +1845,15 @@ config XEN
 	help
 	  Say Y if you want to run Linux in a Virtual Machine on Xen on ARM.
 
+config ARM_FLUSH_CONSOLE_ON_RESTART
+	bool "Force flush the console on restart"
+	help
+	  If the console is locked while the system is rebooted, the messages
+	  in the temporary logbuffer would not have propogated to all the
+	  console drivers. This option forces the console lock to be
+	  released if it failed to be acquired, which will cause all the
+	  pending messages to be flushed.
+
 endmenu
 
 menu "Boot options"
@@ -1848,6 +1882,21 @@ config DEPRECATED_PARAM_STRUCT
 	help
 	  This was deprecated in 2001 and announced to live on for 5 years.
 	  Some old boot loaders still use this way.
+
+config BUILD_ARM_APPENDED_DTB_IMAGE
+	bool "Build a concatenated zImage/dtb by default"
+	depends on OF
+	help
+	  Enabling this option will cause a concatenated zImage and list of
+	  DTBs to be built by default (instead of a standalone zImage.)
+	  The image will built in arch/arm/boot/zImage-dtb
+
+config BUILD_ARM_APPENDED_DTB_IMAGE_NAMES
+	string "Default dtb names"
+	depends on BUILD_ARM_APPENDED_DTB_IMAGE
+	help
+	  Space separated list of names of dtbs to append when
+	  building a concatenated zImage-dtb.
 
 # Compressed boot loader in ROM.  Yes, we really want to ask about
 # TEXT and BSS so we preserve their values in the config files.
@@ -1881,6 +1930,14 @@ config ZBOOT_ROM
 	help
 	  Say Y here if you intend to execute your compressed kernel image
 	  (zImage) directly from ROM or flash.  If unsure, say N.
+
+config COMPAT_CPUINFO
+	bool "Show /proc/cpuinfo in old form"
+	default n
+	help
+	  Show old style /proc/cpuinfo. Do not show cpu features with each
+	  cpu cores.
+	  If unsure, say N
 
 choice
 	prompt "Include SD/MMC loader in zImage (EXPERIMENTAL)"
@@ -2063,6 +2120,14 @@ config CRASH_DUMP
 
 	  For more details see Documentation/kdump/kdump.txt
 
+config RESTART_DISABLE_CACHE
+        bool "Disable cache in arm_machine_restart"
+	default y
+        help
+          Whther to disable DCache in arm_machine_restart().
+          This is a temporary solution before MTK change to use new kernel
+          restart flow.
+
 config AUTO_ZRELADDR
 	bool "Auto calculation of the decompressed kernel image address"
 	depends on !ZBOOT_ROM && !ARCH_U300
@@ -2198,6 +2263,13 @@ config NEON
 	  Say Y to include support code for NEON, the ARMv7 Advanced SIMD
 	  Extension.
 
+config KERNEL_MODE_NEON
+	bool "Support for NEON in kernel mode"
+	default n
+	depends on NEON
+	help
+	  Say Y to include support for NEON in kernel mode.
+
 endmenu
 
 menu "Userspace binary formats"
@@ -2246,3 +2318,4 @@ source "crypto/Kconfig"
 source "lib/Kconfig"
 
 source "arch/arm/kvm/Kconfig"
+

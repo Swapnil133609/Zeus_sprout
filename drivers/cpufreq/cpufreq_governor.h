@@ -40,6 +40,9 @@
 /* Ondemand Sampling types */
 enum {OD_NORMAL_SAMPLE, OD_SUB_SAMPLE};
 
+/* Hotplug Sampling types */
+enum {HP_NORMAL_SAMPLE, HP_SUB_SAMPLE};
+
 /*
  * Macro for creating governors sysfs routines
  *
@@ -127,6 +130,8 @@ static void *get_cpu_dbs_info_s(int cpu)				\
  * cdbs: common dbs
  * od_*: On-demand governor
  * cs_*: Conservative governor
+ * hp_*: Hotplug governor
+ * ex_*: ElementalX governor
  */
 
 /* Per cpu structures */
@@ -135,6 +140,13 @@ struct cpu_dbs_common_info {
 	u64 prev_cpu_idle;
 	u64 prev_cpu_wall;
 	u64 prev_cpu_nice;
+	/*
+	 * Used to keep track of load in the previous interval. However, when
+	 * explicitly set to zero, it is used as a flag to ensure that we copy
+	 * the previous load to the current interval only once, upon the first
+	 * wake-up from idle.
+	 */
+	unsigned int prev_load;
 	struct cpufreq_policy *cur_policy;
 	struct delayed_work work;
 	/*
@@ -163,7 +175,23 @@ struct cs_cpu_dbs_info_s {
 	unsigned int enable:1;
 };
 
-/* Per policy Governers sysfs tunables */
+struct hp_cpu_dbs_info_s {
+	struct cpu_dbs_common_info cdbs;
+	struct cpufreq_frequency_table *freq_table;
+	unsigned int freq_lo;
+	unsigned int freq_lo_jiffies;
+	unsigned int freq_hi_jiffies;
+	unsigned int rate_mult;
+	unsigned int sample_type:1;
+};
+
+struct ex_cpu_dbs_info_s {
+	struct cpu_dbs_common_info cdbs;
+	unsigned int down_floor;
+	unsigned int enable:1;
+};
+
+/* Per policy Governors sysfs tunables */
 struct od_dbs_tuners {
 	unsigned int ignore_nice_load;
 	unsigned int sampling_rate;
@@ -182,12 +210,50 @@ struct cs_dbs_tuners {
 	unsigned int freq_step;
 };
 
-/* Common Governer data across policies */
+struct hp_dbs_tuners {
+	unsigned int ignore_nice_load;
+	unsigned int sampling_rate;
+	unsigned int sampling_down_factor;
+	unsigned int up_threshold;
+	unsigned int adj_up_threshold;
+	unsigned int powersave_bias;
+	unsigned int io_is_busy;
+        unsigned int down_differential;
+	unsigned int cpu_up_threshold;
+	unsigned int cpu_down_differential;
+	unsigned int cpu_up_avg_times;
+	unsigned int cpu_down_avg_times;
+	unsigned int cpu_num_limit;
+	unsigned int cpu_num_base;
+	unsigned int is_cpu_hotplug_disable;
+	unsigned int cpu_input_boost_enable;
+	unsigned int cpu_input_boost_num;
+	unsigned int cpu_rush_boost_enable;
+	unsigned int cpu_rush_boost_num;
+	unsigned int cpu_rush_threshold;
+	unsigned int cpu_rush_tlp_times;
+	unsigned int cpu_rush_avg_times;
+};
+
+struct ex_dbs_tuners {
+	unsigned int ignore_nice_load;
+	unsigned int sampling_rate;
+	unsigned int up_threshold;
+	unsigned int down_differential;
+	unsigned int active_floor_freq;
+	unsigned int max_screen_off_freq;
+	unsigned int sampling_down_factor;
+	unsigned int powersave;
+};
+
+/* Common Governor data across policies */
 struct dbs_data;
 struct common_dbs_data {
 	/* Common across governors */
 	#define GOV_ONDEMAND		0
 	#define GOV_CONSERVATIVE	1
+        #define GOV_HOTPLUG		2
+	#define GOV_ELEMENTALX		3
 	int governor;
 	struct attribute_group *attr_group_gov_sys; /* one governor - system */
 	struct attribute_group *attr_group_gov_pol; /* one governor - policy */
@@ -200,6 +266,7 @@ struct common_dbs_data {
 	void (*gov_dbs_timer)(struct work_struct *work);
 	void (*gov_check_cpu)(int cpu, unsigned int load);
 	int (*init)(struct dbs_data *dbs_data);
+	int (*init_ex)(struct dbs_data *dbs_data, struct cpufreq_policy *policy);
 	void (*exit)(struct dbs_data *dbs_data);
 
 	/* Governor specific ops, see below */
@@ -210,6 +277,7 @@ struct common_dbs_data {
 struct dbs_data {
 	struct common_dbs_data *cdata;
 	unsigned int min_sampling_rate;
+	struct cpufreq_frequency_table *freq_table;
 	int usage_count;
 	void *tuners;
 
@@ -227,6 +295,14 @@ struct od_ops {
 
 struct cs_ops {
 	struct notifier_block *notifier_block;
+};
+
+struct hp_ops {
+	void (*powersave_bias_init_cpu)(int cpu);
+	unsigned int (*powersave_bias_target)(struct cpufreq_policy *policy,
+			unsigned int freq_next, unsigned int relation);
+	void (*freq_increase)(struct cpufreq_policy *p, unsigned int freq);
+	struct input_handler *input_handler; // <-XXX
 };
 
 static inline int delay_for_sampling_rate(unsigned int sampling_rate)
@@ -255,7 +331,6 @@ static ssize_t show_sampling_rate_min_gov_pol				\
 	return sprintf(buf, "%u\n", dbs_data->min_sampling_rate);	\
 }
 
-u64 get_cpu_idle_time(unsigned int cpu, u64 *wall, int io_busy);
 void dbs_check_cpu(struct dbs_data *dbs_data, int cpu);
 bool need_load_eval(struct cpu_dbs_common_info *cdbs,
 		unsigned int sampling_rate);
@@ -267,4 +342,8 @@ void od_register_powersave_bias_handler(unsigned int (*f)
 		(struct cpufreq_policy *, unsigned int, unsigned int),
 		unsigned int powersave_bias);
 void od_unregister_powersave_bias_handler(void);
+void hp_register_powersave_bias_handler(unsigned int (*f)
+		(struct cpufreq_policy *, unsigned int, unsigned int),
+		unsigned int powersave_bias);
+void hp_unregister_powersave_bias_handler(void);
 #endif /* _CPUFREQ_GOVERNOR_H */

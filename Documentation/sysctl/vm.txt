@@ -29,6 +29,7 @@ Currently, these files are in /proc/sys/vm:
 - dirty_writeback_centisecs
 - drop_caches
 - extfrag_threshold
+- extra_free_kbytes
 - hugepages_treat_as_movable
 - hugetlb_shm_group
 - laptop_mode
@@ -56,6 +57,9 @@ Currently, these files are in /proc/sys/vm:
 - swappiness
 - user_reserve_kbytes
 - vfs_cache_pressure
+- wmark_high_kbytes
+- wmark_low_kbytes
+- wmark_min_kbytes
 - zone_reclaim_mode
 
 ==============================================================
@@ -195,6 +199,21 @@ that the allocation will succeed as long as watermarks are met.
 
 The kernel will not compact memory in a zone if the
 fragmentation index is <= extfrag_threshold. The default value is 500.
+
+==============================================================
+
+extra_free_kbytes
+
+This parameter tells the VM to keep extra free memory between the threshold
+where background reclaim (kswapd) kicks in, and the threshold where direct
+reclaim (by allocating processes) kicks in.
+
+This is useful for workloads that require low latency memory allocations
+and have a bounded burstiness in memory allocations, for example a
+realtime application that receives and transmits network traffic
+(causing in-kernel memory allocations) with a maximum total message burst
+size of 200MB may need 200MB of extra free memory to avoid direct reclaim
+related latencies.
 
 ==============================================================
 
@@ -388,6 +407,8 @@ allocations; if you set this to lower than 1024KB, your system will
 become subtly broken, and prone to deadlock under high loads.
 
 Setting this too high will OOM your machine instantly.
+
+This is also updated when wmark_min_free_kbytes changes.
 
 =============================================================
 
@@ -708,6 +729,38 @@ to retain dentry and inode caches. When vfs_cache_pressure=0, the kernel will
 never reclaim dentries and inodes due to memory pressure and this can easily
 lead to out-of-memory conditions. Increasing vfs_cache_pressure beyond 100
 causes the kernel to prefer to reclaim dentries and inodes.
+
+==============================================================
+
+wmark_high_kbytes
+
+Contains the amount of free memory above which kswapd stops reclaiming pages.
+
+The Linux VM uses this number to compute a watermark[WMARK_HIGH] value for
+each zone in the system. This is also updated when min_free_kbytes is updated.
+The minimum is wmark_low_kbytes.
+
+==============================================================
+
+wmark_low_kbytes
+
+Contains the amount of free memory below which kswapd starts to reclaim pages.
+
+The Linux VM uses this number to compute a watermark[WMARK_LOW] value for
+each zone in the system. This is also updated when min_free_kbytes changes.
+The minimum is wmark_min_kbytes and maximum is wmark_high_kbytes.
+
+==============================================================
+
+wmark_min_kbytes
+
+Contains the amount of minimum free memory which Linux VM keep. If the amount
+of free memory is less than it, the VM reclaims memory first and then
+allocates (except PF_MEMALLOC allocations).
+
+The Linux VM uses this number to compute a watermark[WMARK_MIN] value for
+each lowmem zone in the system. This is also updated when min_free_kbytes is
+updated. The minimum is 0 and maximum is wmark_low_kbytes.
 
 ==============================================================
 
