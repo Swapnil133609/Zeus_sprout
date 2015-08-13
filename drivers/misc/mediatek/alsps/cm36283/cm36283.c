@@ -309,16 +309,8 @@ int cm36283_enable_ps(struct i2c_client *client, int enable)
                 goto ENABLE_PS_EXIT_ERR;
             }
             intr_flag = 1;
-            if (obj->hw->polling_mode_ps != 0) {
-                atomic_set(&obj->ps_deb_on, 1);
-                atomic_set(&obj->ps_deb_end, jiffies+atomic_read(&obj->ps_debounce)/(1000/HZ));
-            } else {
-#ifdef CUST_EINT_ALS_TYPE
-                mt_eint_unmask(CUST_EINT_ALS_NUM);
-#else
-                mt65xx_eint_unmask(CUST_EINT_ALS_NUM);
-#endif
-            }
+            atomic_set(&obj->ps_deb_on, 1);
+            atomic_set(&obj->ps_deb_end, jiffies+atomic_read(&obj->ps_debounce)/(1000/HZ));
         }
     else{
             APS_LOG("cm36283_enable_ps disable_ps\n");
@@ -343,13 +335,6 @@ int cm36283_enable_ps(struct i2c_client *client, int enable)
                 goto ENABLE_PS_EXIT_ERR;
             }
             atomic_set(&obj->ps_deb_on, 0);
-            if (obj->hw->polling_mode_ps == 0) {
-#ifdef CUST_EINT_ALS_TYPE
-                mt_eint_mask(CUST_EINT_ALS_NUM);
-#else
-                mt65xx_eint_mask(CUST_EINT_ALS_NUM);
-#endif
-            }
         }
 
     return 0;
@@ -516,7 +501,7 @@ static int cm36283_get_ps_value(struct cm36283_priv *obj, u8 ps)
         {
           //if ps is disable do not report value
           APS_DBG("PS: not enable and do not report this value\n");
-          return -EINVAL;
+          return -1;
         }
         else
         {
@@ -530,7 +515,7 @@ static int cm36283_get_ps_value(struct cm36283_priv *obj, u8 ps)
         {
             APS_DBG("PS:  %05d => %05d (-1)\n", ps, val);
         }
-        return -EINVAL;
+        return -1;
     }
 }
 /********************************************************************/
@@ -579,16 +564,16 @@ static int cm36283_get_als_value(struct cm36283_priv *obj, u16 als)
         if ((level_low >= level_high) || (value_low >= value_high))
             value = value_low;
         else
-        value = (level_diff * value_low + (als - level_low) * value_diff + ((level_diff + 1) >> 1)) / level_diff;
+            value = (level_diff * value_low + (als - level_low) * value_diff + ((level_diff + 1) >> 1)) / level_diff;
 
         APS_DBG("ALS: %d [%d, %d] => %d [%d, %d] \n", als, level_low, level_high, value, value_low, value_high);
+        return value;
+            if (atomic_read(&obj->trace) & CMC_TRC_CVT_ALS)
+            {
+                APS_DBG("ALS: %05d => %05d\n", als, obj->hw->als_value[idx]);
+            }
 
-        if (atomic_read(&obj->trace) & CMC_TRC_CVT_ALS)
-        {
-            APS_DBG("ALS: %05d => %05d\n", als, obj->hw->als_value[idx]);
-        }
-
-        return obj->hw->als_value[idx];
+            return obj->hw->als_value[idx];
         }
         else
         {
@@ -596,7 +581,7 @@ static int cm36283_get_als_value(struct cm36283_priv *obj, u16 als)
             {
                 APS_DBG("ALS: %05d => %05d (-1)\n", als, obj->hw->als_value[idx]);
             }
-            return -EINVAL;
+            return -1;
         }
 
 }
@@ -614,10 +599,10 @@ static ssize_t cm36283_show_config(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
-    res = scnprintf(buf, PAGE_SIZE, "(%d %d %d %d %d)\n",
+    res = snprintf(buf, PAGE_SIZE, "(%d %d %d %d %d)\n",
         atomic_read(&cm36283_obj->i2c_retry), atomic_read(&cm36283_obj->als_debounce),
         atomic_read(&cm36283_obj->ps_mask), atomic_read(&cm36283_obj->ps_thd_val), atomic_read(&cm36283_obj->ps_debounce));
     return res;
@@ -629,7 +614,7 @@ static ssize_t cm36283_store_config(struct device_driver *ddri, const char *buf,
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
     if(5 == sscanf(buf, "%d %d %d %d %d", &retry, &als_deb, &mask, &thres, &ps_deb))
@@ -653,10 +638,10 @@ static ssize_t cm36283_show_trace(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
-    res = scnprintf(buf, PAGE_SIZE, "0x%04X\n", atomic_read(&cm36283_obj->trace));
+    res = snprintf(buf, PAGE_SIZE, "0x%04X\n", atomic_read(&cm36283_obj->trace));
     return res;
 }
 /*----------------------------------------------------------------------------*/
@@ -666,7 +651,7 @@ static ssize_t cm36283_store_trace(struct device_driver *ddri, const char *buf, 
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
     if(1 == sscanf(buf, "0x%x", &trace))
@@ -687,15 +672,15 @@ static ssize_t cm36283_show_als(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
     if((res = cm36283_read_als(cm36283_obj->client, &cm36283_obj->als)))
     {
-        return scnprintf(buf, PAGE_SIZE, "ERROR: %d\n", res);
+        return snprintf(buf, PAGE_SIZE, "ERROR: %d\n", res);
     }
     else
     {
-        return scnprintf(buf, PAGE_SIZE, "0x%04X\n", cm36283_obj->als);
+        return snprintf(buf, PAGE_SIZE, "0x%04X\n", cm36283_obj->als);
     }
 }
 /*----------------------------------------------------------------------------*/
@@ -705,16 +690,16 @@ static ssize_t cm36283_show_ps(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm3623_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
     if((res = cm36283_read_ps(cm36283_obj->client, &cm36283_obj->ps)))
     {
-        return scnprintf(buf, PAGE_SIZE, "ERROR: %d\n", res);
+        return snprintf(buf, PAGE_SIZE, "ERROR: %d\n", res);
     }
     else
     {
-        return scnprintf(buf, PAGE_SIZE, "0x%04X\n", cm36283_obj->ps);
+        return snprintf(buf, PAGE_SIZE, "0x%04X\n", cm36283_obj->ps);
     }
 }
 /*----------------------------------------------------------------------------*/
@@ -723,7 +708,7 @@ static ssize_t cm36283_show_reg(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
 
@@ -743,12 +728,12 @@ static ssize_t cm36283_store_send(struct device_driver *ddri, const char *buf, s
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
     else if(2 != sscanf(buf, "%x %x", &addr, &cmd))
     {
         APS_ERR("invalid format: '%s'\n", buf);
-        return -EINVAL;
+        return 0;
     }
 
     dat = (u8)cmd;
@@ -768,12 +753,12 @@ static ssize_t cm36283_store_recv(struct device_driver *ddri, const char *buf, s
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
     else if(1 != sscanf(buf, "%x", &addr))
     {
         APS_ERR("invalid format: '%s'\n", buf);
-        return -EINVAL;
+        return 0;
     }
 
     //****************************
@@ -787,24 +772,24 @@ static ssize_t cm36283_show_status(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
     if(cm36283_obj->hw)
     {
-        len += scnprintf(buf+len, PAGE_SIZE-len, "CUST: %d, (%d %d)\n",
+        len += snprintf(buf+len, PAGE_SIZE-len, "CUST: %d, (%d %d)\n",
             cm36283_obj->hw->i2c_num, cm36283_obj->hw->power_id, cm36283_obj->hw->power_vol);
     }
     else
     {
-        len += scnprintf(buf+len, PAGE_SIZE-len, "CUST: NULL\n");
+        len += snprintf(buf+len, PAGE_SIZE-len, "CUST: NULL\n");
     }
 
-    len += scnprintf(buf+len, PAGE_SIZE-len, "REGS: %02X %02X %02X %02lX %02lX\n",
+    len += snprintf(buf+len, PAGE_SIZE-len, "REGS: %02X %02X %02X %02lX %02lX\n",
                 atomic_read(&cm36283_obj->als_cmd_val), atomic_read(&cm36283_obj->ps_cmd_val),
                 atomic_read(&cm36283_obj->ps_thd_val),cm36283_obj->enable, cm36283_obj->pending_intr);
 
-    len += scnprintf(buf+len, PAGE_SIZE-len, "MISC: %d %d\n", atomic_read(&cm36283_obj->als_suspend), atomic_read(&cm36283_obj->ps_suspend));
+    len += snprintf(buf+len, PAGE_SIZE-len, "MISC: %d %d\n", atomic_read(&cm36283_obj->als_suspend), atomic_read(&cm36283_obj->ps_suspend));
 
     return len;
 }
@@ -845,14 +830,14 @@ static ssize_t cm36283_show_alslv(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
     for(idx = 0; idx < cm36283_obj->als_level_num; idx++)
     {
-        len += scnprintf(buf+len, PAGE_SIZE-len, "%d ", cm36283_obj->hw->als_level[idx]);
+        len += snprintf(buf+len, PAGE_SIZE-len, "%d ", cm36283_obj->hw->als_level[idx]);
     }
-    len += scnprintf(buf+len, PAGE_SIZE-len, "\n");
+    len += snprintf(buf+len, PAGE_SIZE-len, "\n");
     return len;
 }
 /*----------------------------------------------------------------------------*/
@@ -861,7 +846,7 @@ static ssize_t cm36283_store_alslv(struct device_driver *ddri, const char *buf, 
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
     else if(!strcmp(buf, "def"))
     {
@@ -882,14 +867,14 @@ static ssize_t cm36283_show_alsval(struct device_driver *ddri, char *buf)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
 
     for(idx = 0; idx < cm36283_obj->als_value_num; idx++)
     {
-        len += scnprintf(buf+len, PAGE_SIZE-len, "%d ", cm36283_obj->hw->als_value[idx]);
+        len += snprintf(buf+len, PAGE_SIZE-len, "%d ", cm36283_obj->hw->als_value[idx]);
     }
-    len += scnprintf(buf+len, PAGE_SIZE-len, "\n");
+    len += snprintf(buf+len, PAGE_SIZE-len, "\n");
     return len;
 }
 /*----------------------------------------------------------------------------*/
@@ -898,7 +883,7 @@ static ssize_t cm36283_store_alsval(struct device_driver *ddri, const char *buf,
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return 0;
     }
     else if(!strcmp(buf, "def"))
     {
@@ -1009,7 +994,7 @@ static int cm36283_check_intr(struct i2c_client *client)
     {
         intr_flag = 1;//for away
     }else{
-        res = -EINVAL;
+        res = -1;
         APS_ERR("cm36283_check_intr fail databuf[1]&0x01: %d\n", res);
         goto EXIT_ERR;
     }
@@ -1085,9 +1070,9 @@ int cm36283_setup_eint(struct i2c_client *client)
 #endif
 
 #ifdef CUST_EINT_ALS_TYPE
-    mt_eint_mask(CUST_EINT_ALS_NUM);
+    mt_eint_unmask(CUST_EINT_ALS_NUM);
 #else
-    mt65xx_eint_mask(CUST_EINT_ALS_NUM);
+    mt65xx_eint_unmask(CUST_EINT_ALS_NUM);
 #endif
     return 0;
 }
@@ -1127,7 +1112,7 @@ static int set_psensor_threshold(struct i2c_client *client)
     if(res <= 0)
     {
         APS_ERR("i2c_master_send function err\n");
-        return -EINVAL;
+        return -1;
     }
     return 0;
 
@@ -1558,7 +1543,7 @@ int cm36283_ps_operate(void* self, uint32_t command, void* buff_in, int size_in,
                         if((err = cm36283_enable_ps(obj->client, 1)))
                         {
                             APS_ERR("enable ps fail: %d\n", err);
-                            return -EINVAL;
+                            return -1;
                         }
                         set_bit(CMC_BIT_PS, &obj->enable);
                     }
@@ -1567,7 +1552,7 @@ int cm36283_ps_operate(void* self, uint32_t command, void* buff_in, int size_in,
                         if((err = cm36283_enable_ps(obj->client, 0)))
                         {
                             APS_ERR("disable ps fail: %d\n", err);
-                            return -EINVAL;
+                            return -1;
                         }
                         clear_bit(CMC_BIT_PS, &obj->enable);
                     }
@@ -1641,7 +1626,7 @@ int cm36283_als_operate(void* self, uint32_t command, void* buff_in, int size_in
                         if((err = cm36283_enable_als(obj->client, 1)))
                         {
                             APS_ERR("enable als fail: %d\n", err);
-                            return -EINVAL;
+                            return -1;
                         }
                         set_bit(CMC_BIT_ALS, &obj->enable);
                     }
@@ -1650,7 +1635,7 @@ int cm36283_als_operate(void* self, uint32_t command, void* buff_in, int size_in
                         if((err = cm36283_enable_als(obj->client, 0)))
                         {
                             APS_ERR("disable als fail: %d\n", err);
-                            return -EINVAL;
+                            return -1;
                         }
                         clear_bit(CMC_BIT_ALS, &obj->enable);
                     }
@@ -1711,7 +1696,7 @@ static int als_enable_nodata(int en)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return -1;
     }
     APS_LOG("cm36283_obj als enable value = %d\n", en);
     for (i=0; i<10; i++) {
@@ -1721,7 +1706,7 @@ static int als_enable_nodata(int en)
         }
     if(i >= 10){
         APS_ERR("als_enable_nodata is failed!!\n");
-        return -EINVAL;
+        return -1;
     }
     return 0;
 }
@@ -1738,7 +1723,7 @@ static int als_get_data(int* value, int* status)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return -1;
     }
     obj = cm36283_obj;
     if((err = cm36283_read_als(obj->client, &obj->als)))
@@ -1770,7 +1755,7 @@ static int ps_enable_nodata(int en)
     if(!cm36283_obj)
     {
         APS_ERR("cm36283_obj is null!!\n");
-        return -EINVAL;
+        return -1;
     }
     APS_LOG("cm36283_obj ps enable value = %d\n", en);
     for (i=0; i<10; i++) {
@@ -1780,7 +1765,7 @@ static int ps_enable_nodata(int en)
         }
     if(i >=10){
         APS_ERR("ps_enable_nodata is failed!!\n");
-        return -EINVAL;
+        return -1;
     }
     return 0;
 
@@ -1798,7 +1783,7 @@ static int ps_get_data(int* value, int* status)
     if(!cm36283_obj)
     {
         APS_ERR("cm36652_obj is null!!\n");
-        return -EINVAL;
+        return -1;
     }
 
     if((err = cm36283_read_ps(cm36283_obj->client, &cm36283_obj->ps)))
@@ -1916,11 +1901,7 @@ static int cm36283_i2c_probe(struct i2c_client *client, const struct i2c_device_
     ps_ctl.open_report_data= ps_open_report_data;
     ps_ctl.enable_nodata = ps_enable_nodata;
     ps_ctl.set_delay  = ps_set_delay;
-    if (obj->hw->polling_mode_ps == 0) {
-        ps_ctl.is_report_input_direct = true;
-    } else {
-        ps_ctl.is_report_input_direct = false;
-    }
+    ps_ctl.is_report_input_direct = false;
     ps_ctl.is_support_batch = obj->hw->is_batch_supported_ps;
 
     err = ps_register_control_path(&ps_ctl);
@@ -2038,11 +2019,11 @@ static int  cm36283_local_init(void)
     if(i2c_add_driver(&cm36283_i2c_driver))
     {
         APS_ERR("add driver error\n");
-        return -EINVAL;
+        return -1;
     }
     if(-1 == cm36283_init_flag)
     {
-        return -EINVAL;
+       return -1;
     }
     return 0;
 }
@@ -2050,7 +2031,7 @@ static int  cm36283_local_init(void)
 static int update_alsps_data(void)
 {
     struct alsps_hw_ssb *cm36283_alsps_data = NULL;
-    int i = 0;
+    int err ,i=0;
     const char *name = "cm36283";
 
 
@@ -2064,12 +2045,8 @@ static int update_alsps_data(void)
             cm36283_get_cust_alsps_hw()->als_level[i] = cm36283_alsps_data->als_level[i];
         for (i=0; i<16; i++)
             cm36283_get_cust_alsps_hw()->als_value[i] = cm36283_alsps_data->als_value[i];
-
         APS_LOG("[%s]cm36283 success update addr=0x%x,i2c_num=%d,threshold_high=%d,threshold_low=%d\n",
         __func__,cm36283_alsps_data->i2c_addr[0],cm36283_alsps_data->i2c_num,cm36283_alsps_data->ps_threshold_high,cm36283_alsps_data->ps_threshold_low);
-    } else {
-        APS_ERR("[%s] cm36283 find_alsps_data failed\n", __func__);
-        return -EINVAL;
     }
     return 0;
 }
@@ -2077,23 +2054,13 @@ static int update_alsps_data(void)
 static int __init cm36283_init(void)
 {
     struct alsps_hw *hw = NULL;
-    int err = 0;
 
-    err = update_alsps_data();
-    if (err < 0) {
-        APS_LOG("[%s] cm36283 update_alsps_data failed. Use default\n", __func__);
-    }
+    update_alsps_data();
     hw = cm36283_get_cust_alsps_hw();
-    if (hw != NULL) {
-        struct i2c_board_info i2c_cm36283={ I2C_BOARD_INFO(CM36283_DEV_NAME, hw->i2c_addr[0])};
-        i2c_register_board_info(hw->i2c_num, &i2c_cm36283, 1);
-        alsps_driver_add(&cm36283_init_info);
-        err = 0;
-    } else {
-        APS_ERR("[%s] cm36283_get_cust_alsps_hw failed\n", __func__);
-        err = -EINVAL;
-    }
-    return err;
+    struct i2c_board_info i2c_cm36283={ I2C_BOARD_INFO(CM36283_DEV_NAME, hw->i2c_addr[0])};
+    i2c_register_board_info(hw->i2c_num, &i2c_cm36283, 1);
+    alsps_driver_add(&cm36283_init_info);
+    return 0;
 }
 /*----------------------------------------------------------------------------*/
 static void __exit cm36283_exit(void)
