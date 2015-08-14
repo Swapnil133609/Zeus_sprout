@@ -45,6 +45,9 @@ static struct workqueue_struct *cpu_boost_wq;
 
 static struct work_struct input_boost_work;
 
+static unsigned int cpu_boost = 0;
+module_param(cpu_boost, uint, 0644);
+
 static unsigned int boost_ms;
 module_param(boost_ms, uint, 0644);
 
@@ -347,6 +350,9 @@ static void cpuboost_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 	u64 now;
+
+	if (!cpu_boost)
+		return;
 
 	if (!input_boost_enabled)
 		return;
