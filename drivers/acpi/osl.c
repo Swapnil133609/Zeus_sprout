@@ -1724,7 +1724,7 @@ acpi_status __init acpi_os_initialize(void)
 
 acpi_status __init acpi_os_initialize1(void)
 {
-    acpi_reserve_resources();
+	acpi_reserve_resources();
 	kacpid_wq = alloc_workqueue("kacpid", 0, 1);
 	kacpi_notify_wq = alloc_workqueue("kacpi_notify", 0, 1);
 	kacpi_hotplug_wq = alloc_workqueue("kacpi_hotplug", 0, 1);

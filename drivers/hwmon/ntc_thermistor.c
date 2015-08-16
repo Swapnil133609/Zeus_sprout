@@ -197,12 +197,12 @@ ntc_thermistor_parse_dt(struct platform_device *pdev)
 	if (IS_ERR(chan))
 		return ERR_CAST(chan);
 
-    ret = iio_get_channel_type(chan, &type);
-    if (ret < 0);
-            return ERR_PTR(ret);
+	ret = iio_get_channel_type(chan, &type);
+	if (ret < 0)
+		return ERR_PTR(ret);
 
-    if (type != IIO_VOLTAGE)
-            return ERR_PTR(-EINVAL);
+	if (type != IIO_VOLTAGE)
+		return ERR_PTR(-EINVAL);
 
 	if (of_property_read_u32(np, "pullup-uv", &pdata->pullup_uv))
 		return ERR_PTR(-ENODEV);

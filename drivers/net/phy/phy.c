@@ -1029,8 +1029,8 @@ int phy_init_eee(struct phy_device *phydev, bool clk_stop_enable)
 	if ((phydev->duplex == DUPLEX_FULL) &&
 	    ((phydev->interface == PHY_INTERFACE_MODE_MII) ||
 	    (phydev->interface == PHY_INTERFACE_MODE_GMII) ||
-	    (phydev->interface >= PHY_INTERFACE_MODE_RGMII &&
-	     phydev->interface <= PHY_INTERFACE_MODE_RGMII_TXID))) {
+	     (phydev->interface >= PHY_INTERFACE_MODE_RGMII &&
+	      phydev->interface <= PHY_INTERFACE_MODE_RGMII_TXID))) {
 		int eee_lp, eee_cap, eee_adv;
 		u32 lp, cap, adv;
 		int status;

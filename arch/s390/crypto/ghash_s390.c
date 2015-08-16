@@ -20,7 +20,7 @@ struct ghash_ctx {
 };
 
 struct ghash_desc_ctx {
-        u8 icv[GHASH_BLOCK_SIZE];
+	u8 icv[GHASH_BLOCK_SIZE];
 	u8 key[GHASH_BLOCK_SIZE];
 	u8 buffer[GHASH_BLOCK_SIZE];
 	u32 bytes;
@@ -29,10 +29,10 @@ struct ghash_desc_ctx {
 static int ghash_init(struct shash_desc *desc)
 {
 	struct ghash_desc_ctx *dctx = shash_desc_ctx(desc);
-        struct ghash_ctx *ctx = crypto_shash_ctx(desc->tfm);
+	struct ghash_ctx *ctx = crypto_shash_ctx(desc->tfm);
 
 	memset(dctx, 0, sizeof(*dctx));
-        memcpy(dctx->key, ctx->key, GHASH_BLOCK_SIZE);
+	memcpy(dctx->key, ctx->key, GHASH_BLOCK_SIZE);
 
 	return 0;
 }
@@ -109,7 +109,7 @@ static int ghash_flush(struct ghash_desc_ctx *dctx)
 		if (ret != GHASH_BLOCK_SIZE)
 			return -EIO;
 
-                dctx->bytes = 0;
+		dctx->bytes = 0;
 	}
 
 	return 0;
