@@ -21,7 +21,7 @@
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/kobject.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/platform_device.h>
 #include <asm/atomic.h>
 
@@ -131,9 +131,9 @@ struct cm36283_priv {
     ulong        enable;         /*enable mask*/
     ulong        pending_intr;    /*pending interrupt*/
 
-    /*early suspend*/
-    #if defined(CONFIG_HAS_EARLYSUSPEND)
-    struct early_suspend    early_drv;
+    /*power suspend*/
+    #if defined(CONFIG_POWERSUSPEND)
+    struct power_suspend    power_drv;
     #endif
 };
 /*----------------------------------------------------------------------------*/
@@ -1367,9 +1367,9 @@ static struct miscdevice cm36283_device = {
 };
 
 /*--------------------------------------------------------------------------------------*/
-static void cm36283_early_suspend(struct early_suspend *h)
+static void cm36283_power_suspend(struct power_suspend *h)
 {
-        struct cm36283_priv *obj = container_of(h, struct cm36283_priv, early_drv);
+        struct cm36283_priv *obj = container_of(h, struct cm36283_priv, power_drv);
         int err;
         APS_FUN();
 
@@ -1386,9 +1386,9 @@ static void cm36283_early_suspend(struct early_suspend *h)
         }
 }
 
-static void cm36283_late_resume(struct early_suspend *h)
+static void cm36283_power_resume(struct power_suspend *h)
 {
-        struct cm36283_priv *obj = container_of(h, struct cm36283_priv, early_drv);
+        struct cm36283_priv *obj = container_of(h, struct cm36283_priv, power_drv);
         int err;
         hwm_sensor_data sensor_data;
         memset(&sensor_data, 0, sizeof(sensor_data));
@@ -1933,11 +1933,10 @@ static int cm36283_i2c_probe(struct i2c_client *client, const struct i2c_device_
         APS_ERR("register proximity batch support err = %d\n", err);
         goto exit_sensor_obj_attach_fail;
     }
-    #if defined(CONFIG_HAS_EARLYSUSPEND)
-    obj->early_drv.level    = EARLY_SUSPEND_LEVEL_STOP_DRAWING - 2,
-    obj->early_drv.suspend  = cm36283_early_suspend,
-    obj->early_drv.resume   = cm36283_late_resume,
-    register_early_suspend(&obj->early_drv);
+    #if defined(CONFIG_POWERSUSPEND)
+    obj->power_drv.suspend  = cm36283_power_suspend,
+    obj->power_drv.resume   = cm36283_power_resume,
+    register_power_suspend(&obj->power_drv);
     #endif
 
     cm36283_init_flag =0;

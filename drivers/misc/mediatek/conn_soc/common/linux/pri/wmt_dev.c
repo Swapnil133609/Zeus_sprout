@@ -63,8 +63,8 @@
 #include <linux/suspend.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
-#ifdef CONFIG_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 #define MTK_WMT_VERSION  "SOC Consys WMT Driver - v1.0"
@@ -174,17 +174,17 @@ static INT32 wmt_dbg_lte_coex_test(INT32 par1, INT32 par2, INT32 par3);
 #endif
 #endif
 
-#ifdef CONFIG_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 
 static struct work_struct gPwrOnWork;
-UINT32 g_early_suspend_flag = 0;
+UINT32 g_power_suspend_flag = 0;
 OSAL_SLEEPABLE_LOCK g_es_lr_lock;
-static void wmt_dev_early_suspend(struct early_suspend *h)
+static void wmt_dev_power_suspend(struct power_suspend *h)
 {
         osal_lock_sleepable_lock(&g_es_lr_lock);
-        g_early_suspend_flag = 1;
+        g_power_suspend_flag = 1;
         osal_unlock_sleepable_lock(&g_es_lr_lock);
-        WMT_INFO_FUNC("@@@@@@@@@@wmt enter early suspend@@@@@@@@@@@@@@\n");
+        WMT_INFO_FUNC("@@@@@@@@@@wmt enter power suspend@@@@@@@@@@@@@@\n");
         cancel_work_sync(&gPwrOnWork);
         if (MTK_WCN_BOOL_FALSE == mtk_wcn_wmt_func_off(WMTDRV_TYPE_LPBK)) {
                 WMT_WARN_FUNC("WMT turn off LPBK fail\n");
@@ -195,31 +195,31 @@ static void wmt_dev_early_suspend(struct early_suspend *h)
         }
 }
 
-static void wmt_dev_late_resume(struct early_suspend *h)
+static void wmt_dev_power_resume(struct power_suspend *h)
 {
-        WMT_INFO_FUNC("@@@@@@@@@@wmt enter late resume@@@@@@@@@@@@@@\n");
+        WMT_INFO_FUNC("@@@@@@@@@@wmt enter power resume@@@@@@@@@@@@@@\n");
         osal_lock_sleepable_lock(&g_es_lr_lock);
-        g_early_suspend_flag = 0;
+        g_power_suspend_flag = 0;
         osal_unlock_sleepable_lock(&g_es_lr_lock);
         schedule_work(&gPwrOnWork);
 
         return 0;
 }
 
-struct early_suspend wmt_early_suspend_handler = {
-        .suspend = wmt_dev_early_suspend,
-        .resume = wmt_dev_late_resume,
+struct power_suspend wmt_power_suspend_handler = {
+        .suspend = wmt_dev_power_suspend,
+        .resume = wmt_dev_power_resume,
 };
 
 #else
-UINT32 g_early_suspend_flag = 0;
+UINT32 g_power_suspend_flag = 0;
 #endif
 /*******************************************************************************
 *                          F U N C T I O N S
 ********************************************************************************
 */
 
-#if CONSYS_WMT_REG_SUSPEND_CB_ENABLE || defined(CONFIG_EARLYSUSPEND)
+#if CONSYS_WMT_REG_SUSPEND_CB_ENABLE || defined(CONFIG_POWERSUSPEND)
 
 static INT32 wmt_pwr_on_handler (struct work_stuct *work)
 {
@@ -265,9 +265,9 @@ static int mtk_wmt_resume(struct platform_device *pdev)
 #endif
 
 
-MTK_WCN_BOOL wmt_dev_get_early_suspend_state(void)
+MTK_WCN_BOOL wmt_dev_get_power_suspend_state(void)
 {
-    MTK_WCN_BOOL bRet = (0 == g_early_suspend_flag) ? MTK_WCN_BOOL_FALSE : MTK_WCN_BOOL_TRUE;
+    MTK_WCN_BOOL bRet = (0 == g_power_suspend_flag) ? MTK_WCN_BOOL_FALSE : MTK_WCN_BOOL_TRUE;
     //WMT_INFO_FUNC("bRet:%d\n", bRet);
     return 	bRet;
 }
@@ -2730,11 +2730,11 @@ static int WMT_init(void)
 	gWmtInitDone = 1;
 	wake_up(&gWmtInitWq);
 
-#ifdef CONFIG_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
     osal_sleepable_lock_init(&g_es_lr_lock);
         INIT_WORK(&gPwrOnWork, wmt_pwr_on_handler);
-    register_early_suspend(&wmt_early_suspend_handler);
-    WMT_INFO_FUNC("register_early_suspend finished\n");
+    register_power_suspend(&wmt_power_suspend_handler);
+    WMT_INFO_FUNC("register_power_suspend finished\n");
 #endif
 
 	WMT_INFO_FUNC("success \n");
@@ -2773,10 +2773,10 @@ static void WMT_exit (void)
 {
     dev_t dev = MKDEV(gWmtMajor, 0);
 
-#ifdef CONFIG_EARLYSUSPEND
-    unregister_early_suspend(&wmt_early_suspend_handler);
+#ifdef CONFIG_POWERSUSPEND
+    unregister_power_suspend(&wmt_power_suspend_handler);
         osal_sleepable_lock_deinit(&g_es_lr_lock);
-    WMT_INFO_FUNC("unregister_early_suspend finished\n");
+    WMT_INFO_FUNC("unregister_power_suspend finished\n");
 #endif
 	
 #if CONSYS_WMT_REG_SUSPEND_CB_ENABLE

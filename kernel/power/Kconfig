@@ -22,41 +22,16 @@ config HAS_WAKELOCK
 	bool
 	default y
 
-config HAS_EARLYSUSPEND
-	bool
-	default y
-
 config WAKELOCK
 	bool
 	default y
-
-config EARLYSUSPEND
-	bool "Early suspend"
-	depends on WAKELOCK
-	default y
-	select HAS_EARLYSUSPEND
-	---help---
-	  Call early suspend handlers when the user requested sleep state
-	  changes.
-
-config FB_EARLYSUSPEND
-	bool "FB Early suspend"
-	depends on EARLYSUSPEND
-	default y
-	select HAS_EARLYSUSPEND
 
 config POWERSUSPEND
 	bool "Power suspend"
 	default n
 	---help---
-	  Call early suspend handlers when the user requested sleep state
+	  Call power suspend handlers when the user requested sleep state
 	  changes.
-
-config POWERSUSPEND_DEBUG
-	bool "Powersuspend driver debugging code"
-	depends on POWERSUSPEND
-	help
-	  Output debugging info in dmesg [POWERSUSPEND] (Yank555.lu)
 
 config HIBERNATE_CALLBACKS
 	bool

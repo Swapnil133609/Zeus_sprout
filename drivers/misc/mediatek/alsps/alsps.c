@@ -17,8 +17,8 @@ static struct alsps_context *alsps_context_obj = NULL;
 
 
 static struct alsps_init_info* alsps_init_list[MAX_CHOOSE_ALSPS_NUM]= {0}; //modified
-static void alsps_early_suspend(struct early_suspend *h);
-static void alsps_late_resume(struct early_suspend *h);
+static void alsps_power_suspend(struct power_suspend *h);
+static void alsps_power_resume(struct power_suspend *h);
 
 
 int als_data_report(struct input_dev *dev, int value, int status)
@@ -1008,11 +1008,10 @@ static int alsps_probe(struct platform_device *pdev)
         goto exit_alloc_input_dev_failed;
     }
 
-        atomic_set(&(alsps_context_obj->early_suspend), 0);
-    alsps_context_obj->early_drv.level    = EARLY_SUSPEND_LEVEL_STOP_DRAWING - 1,
-    alsps_context_obj->early_drv.suspend  = alsps_early_suspend,
-    alsps_context_obj->early_drv.resume   = alsps_late_resume,
-    register_early_suspend(&alsps_context_obj->early_drv);
+        atomic_set(&(alsps_context_obj->power_suspend), 0);
+    alsps_context_obj->power_drv.suspend  = alsps_power_suspend,
+    alsps_context_obj->power_drv.resume   = alsps_power_resume,
+    register_power_suspend(&alsps_context_obj->power_drv);
 
 
     ALSPS_LOG("----alsps_probe OK !!\n");
@@ -1049,17 +1048,17 @@ static int alsps_remove(struct platform_device *pdev)
     return 0;
 }
 
-static void alsps_early_suspend(struct early_suspend *h)
+static void alsps_power_suspend(struct power_suspend *h)
 {
-   atomic_set(&(alsps_context_obj->early_suspend), 1);
-   ALSPS_LOG(" alsps_early_suspend ok------->hwm_obj->early_suspend=%d \n",atomic_read(&(alsps_context_obj->early_suspend)));
+   atomic_set(&(alsps_context_obj->power_suspend), 1);
+   ALSPS_LOG(" alsps_power_suspend ok------->hwm_obj->power_suspend=%d \n",atomic_read(&(alsps_context_obj->power_suspend)));
    return ;
 }
 /*----------------------------------------------------------------------------*/
-static void alsps_late_resume(struct early_suspend *h)
+static void alsps_power_resume(struct power_suspend *h)
 {
-   atomic_set(&(alsps_context_obj->early_suspend), 0);
-   ALSPS_LOG(" alsps_late_resume ok------->hwm_obj->early_suspend=%d \n",atomic_read(&(alsps_context_obj->early_suspend)));
+   atomic_set(&(alsps_context_obj->power_suspend), 0);
+   ALSPS_LOG(" alsps_power_resume ok------->hwm_obj->power_suspend=%d \n",atomic_read(&(alsps_context_obj->power_suspend)));
    return ;
 }
 

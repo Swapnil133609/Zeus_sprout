@@ -23,7 +23,7 @@
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/kobject.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/platform_device.h>
 #include <asm/atomic.h>
 #include <accel.h>
@@ -133,9 +133,9 @@ struct lsm303d_i2c_data {
     atomic_t                fir_en;
     struct data_filter      fir;
 #endif
-    /*early suspend*/
-#if defined(USE_EARLY_SUSPEND)
-    struct early_suspend    early_drv;
+    /*power suspend*/
+#if defined(USE_POWER_SUSPEND)
+    struct power_suspend    power_drv;
 #endif
 };
 /*----------------------------------------------------------------------------*/
@@ -145,7 +145,7 @@ static struct i2c_driver lsm303d_i2c_driver = {
     },
     .probe              = lsm303d_i2c_probe,
     .remove                = lsm303d_i2c_remove,
-#if !defined(USE_EARLY_SUSPEND)
+#if !defined(USE_POWER_SUSPEND)
     .suspend            = lsm303d_suspend,
     .resume             = lsm303d_resume,
 #endif
@@ -1440,7 +1440,7 @@ static ssize_t show_status_value(struct device_driver *ddri, char *buffer)
         GSE_ERR("error: %d\n", err);
     }
 
-    len += snprintf(buffer+len, PAGE_SIZE, "0x%04X ,¡\\t 0x%04X ,¡\\t 0x%04X , \t0x%04X,   \n  0x%04X ,¡\\t  0x%04X ,¡\\t0x%04X ,\t  0x%04X , \t  \n ", buf[0],    buf[1],    buf[2],    buf[3],    buf[4],    buf[5],    buf[6],    buf[7]);
+    len += snprintf(buffer+len, PAGE_SIZE, "0x%04X ,\A1\\t 0x%04X ,\A1\\t 0x%04X , \t0x%04X,   \n  0x%04X ,\A1\\t  0x%04X ,\A1\\t0x%04X ,\t  0x%04X , \t  \n ", buf[0],    buf[1],    buf[2],    buf[3],    buf[4],    buf[5],    buf[6],    buf[7]);
 
 
 
@@ -1858,7 +1858,7 @@ static struct miscdevice lsm303d_device = {
 
 
 /*----------------------------------------------------------------------------*/
-#ifndef USE_EARLY_SUSPEND
+#ifndef USE_POWER_SUSPEND
 /*----------------------------------------------------------------------------*/
 static int lsm303d_suspend(struct i2c_client *client, pm_message_t msg)
 {
@@ -1916,9 +1916,9 @@ static int lsm303d_resume(struct i2c_client *client)
 /*----------------------------------------------------------------------------*/
 #else
 /*----------------------------------------------------------------------------*/
-static void lsm303d_early_suspend(struct early_suspend *h)
+static void lsm303d_power_suspend(struct power_suspend *h)
 {
-    struct lsm303d_i2c_data *obj = container_of(h, struct lsm303d_i2c_data, early_drv);
+    struct lsm303d_i2c_data *obj = container_of(h, struct lsm303d_i2c_data, power_drv);
     int err;
     GSE_FUN();
 
@@ -1941,9 +1941,9 @@ static void lsm303d_early_suspend(struct early_suspend *h)
     lsm303d_power(obj->hw, 0);
 }
 /*----------------------------------------------------------------------------*/
-static void lsm303d_late_resume(struct early_suspend *h)
+static void lsm303d_power_resume(struct power_suspend *h)
 {
-    struct lsm303d_i2c_data *obj = container_of(h, struct lsm303d_i2c_data, early_drv);
+    struct lsm303d_i2c_data *obj = container_of(h, struct lsm303d_i2c_data, power_drv);
     int err;
     GSE_FUN();
 
@@ -2138,11 +2138,11 @@ static int lsm303d_i2c_probe(struct i2c_client *client, const struct i2c_device_
     }
 
 
-#ifdef USE_EARLY_SUSPEND
-    obj->early_drv.level    = EARLY_SUSPEND_LEVEL_DISABLE_FB - 1,
-    obj->early_drv.suspend  = lsm303d_early_suspend,
-    obj->early_drv.resume   = lsm303d_late_resume,
-    register_early_suspend(&obj->early_drv);
+#ifdef USE_POWER_SUSPEND
+    obj->power_drv.level    = POWER_SUSPEND_LEVEL_DISABLE_FB - 1,
+    obj->power_drv.suspend  = lsm303d_power_suspend,
+    obj->power_drv.resume   = lsm303d_power_resume,
+    register_power_suspend(&obj->power_drv);
 #endif
 
     lsm303d_init_flag =0;

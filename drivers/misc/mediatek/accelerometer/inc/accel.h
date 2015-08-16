@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hwmsensor.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/hwmsen_dev.h>
 
 
@@ -104,8 +104,8 @@ struct acc_context {
     atomic_t            wake;  /*user-space request to wake-up, used with stop*/
     struct timer_list   timer;  /* polling timer */
     atomic_t            trace;
-    struct early_suspend    early_drv;
-    atomic_t                early_suspend;
+    struct power_suspend    power_drv;
+    atomic_t                power_suspend;
     struct acc_data       drv_data;
     struct acc_control_path   acc_ctl;
     struct acc_data_path   acc_data;

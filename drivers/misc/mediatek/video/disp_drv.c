@@ -47,8 +47,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/rtpm_prio.h>
 extern unsigned int lcd_fps;
-extern BOOL is_early_suspended;
-extern struct semaphore sem_early_suspend;
+extern BOOL is_power_suspended;
+extern struct semaphore sem_power_suspend;
 
 extern unsigned int EnableVSyncLog;
 
@@ -451,7 +451,7 @@ static int _DISP_DecoupleWriteKThread(void *data)
         dirty = 0;
         memset(&dirty_flag, 0, sizeof(dirty_flag));
         
-        if (!is_early_suspended) 
+        if (!is_power_suspended) 
         {
             if (mutex_trylock(&SwitchModeMutex)) 
             {
@@ -635,7 +635,7 @@ static void DISP_ConfigMemReadDatapath (disp_path_config_dirty *dirty_flag)
     {
         DISP_STATUS ret = _DISP_ConfigUpdateScreen(0, 0, DISP_GetScreenWidth(), DISP_GetScreenHeight());
 
-        if ((ret != DISP_STATUS_OK) && (is_early_suspended == 0))
+        if ((ret != DISP_STATUS_OK) && (is_power_suspended == 0))
             hrtimer_start(&cmd_mode_update_timer, cmd_mode_update_timer_period, HRTIMER_MODE_REL);
         #ifndef MTK_FB_START_DSI_ISR
             disp_path_release_mutex();
@@ -672,7 +672,7 @@ DISP_STATUS DISP_SwitchDisplayMode (struct fb_overlay_mode *pConfig)
         return DISP_STATUS_OK;
     }
 
-    if (!is_early_suspended) 
+    if (!is_power_suspended) 
     {
         pr_debug("[FB Driver] Switch to display mode: %s\n", (pConfig->mode == DISP_DECOUPLE_MODE) ? "de-couple" : "direct-link");
         MMProfileLogEx(MTKFB_MMP_Events.SwitchMode, MMProfileFlagStart, disp_mode, pConfig->mode);
@@ -1818,7 +1818,7 @@ void DISP_StartConfigUpdate(void)
 static int _DISP_ESD_Check(int* dirty)
 {
     unsigned int esd_check_count;
-    if (need_esd_check && (!is_early_suspended))
+    if (need_esd_check && (!is_power_suspended))
     {
         esd_check_count = 0;
         disp_running = 1;
@@ -1970,7 +1970,7 @@ static void _DISP_StartSoftTimer (void)
         ((lcm_params->type == LCM_TYPE_DSI) && (lcm_params->dsi.mode == CMD_MODE))) 
     {
         // Start update timer.
-        if (!is_early_suspended) 
+        if (!is_power_suspended) 
         {
             if (is_immediateupdate) 
             {
@@ -2049,7 +2049,7 @@ static int _DISP_ConfigDlinkDatapath (disp_path_config_dirty *dirty_flag, struct
     {
         DISP_STATUS ret = _DISP_ConfigUpdateScreen(0, 0, DISP_GetScreenWidth(), DISP_GetScreenHeight());
 
-        if ((ret != DISP_STATUS_OK) && (is_early_suspended == 0)) 
+        if ((ret != DISP_STATUS_OK) && (is_power_suspended == 0)) 
         {
             hrtimer_start(&cmd_mode_update_timer, cmd_mode_update_timer_period, HRTIMER_MODE_REL);
         }
@@ -2092,12 +2092,12 @@ static int _DISP_ConfigUpdateKThread(void *data)
         dirty = 0;
         memset(&dirty_flag, 0, sizeof(dirty_flag));
 
-        if (down_interruptible(&sem_early_suspend)) 
+        if (down_interruptible(&sem_power_suspend)) 
         {
             pr_err("[FB Driver] can't get semaphore:%d\n", __LINE__);
             continue;
         }
-        //MMProfileLogEx(MTKFB_MMP_Events.EarlySuspend, MMProfileFlagStart, 1, 0);
+        //MMProfileLogEx(MTKFB_MMP_Events.PowerSuspend, MMProfileFlagStart, 1, 0);
         if(((LCM_TYPE_DSI == lcm_params->type) && (CMD_MODE == lcm_params->dsi.mode)) || (LCM_TYPE_DBI == lcm_params->type))
         {
             _DISP_VSyncCallback(NULL);
@@ -2111,7 +2111,7 @@ static int _DISP_ConfigUpdateKThread(void *data)
             }
         }
 
-        if (!is_early_suspended) 
+        if (!is_power_suspended) 
         {
             // 1. Merge dirty flags
             dirty = _DISP_MergeAALDirty(&dirty_flag);
@@ -2176,8 +2176,8 @@ static int _DISP_ConfigUpdateKThread(void *data)
         }
 
         //MMProfileLog(MTKFB_MMP_Events.UpdateConfig, MMProfileFlagEnd);
-        //MMProfileLogEx(MTKFB_MMP_Events.EarlySuspend, MMProfileFlagEnd, 1, 0);
-        up(&sem_early_suspend);
+        //MMProfileLogEx(MTKFB_MMP_Events.PowerSuspend, MMProfileFlagEnd, 1, 0);
+        up(&sem_power_suspend);
         if (kthread_should_stop())
             break;
     }
@@ -2187,7 +2187,7 @@ static int _DISP_ConfigUpdateKThread(void *data)
 
 static void _DISP_HWDoneCallback(void* pParam)
 {
-    MMProfileLogEx(MTKFB_MMP_Events.DispDone, MMProfileFlagPulse, is_early_suspended, 0);
+    MMProfileLogEx(MTKFB_MMP_Events.DispDone, MMProfileFlagPulse, is_power_suspended, 0);
     disp_running = 0;
     wake_up_interruptible(&disp_done_wq);
 }
@@ -2460,7 +2460,7 @@ void DISP_WaitVSYNC(void)
     vsync_wq_flag = 0;
     if (wait_event_interruptible_timeout(vsync_wq, vsync_wq_flag, HZ/10) == 0)
     {
-        pr_debug("[DISP] Wait VSync timeout. early_suspend=%d\n", is_early_suspended);
+        pr_debug("[DISP] Wait VSync timeout. power_suspend=%d\n", is_power_suspended);
     }
     MMProfileLog(MTKFB_MMP_Events.WaitVSync, MMProfileFlagEnd);
 }
@@ -2772,7 +2772,7 @@ DISP_STATUS DISP_Config_Overlay_to_Memory(unsigned int mva, int enable)
 }
 
 
-DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsigned int is_early_suspended )
+DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsigned int is_power_suspended )
 {
     unsigned int mva;
     unsigned int ret = 0;
@@ -2871,7 +2871,7 @@ DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsi
     MemOutConfig.srcROI.height= DISP_GetScreenHeight();
     MemOutConfig.srcROI.width= DISP_GetScreenWidth();
     
-    if (is_early_suspended == 0)
+    if (is_power_suspended == 0)
     {
         disp_path_clear_mem_out_done_flag();  // clear last time mem_out_done flag
         MemOutConfig.dirty = 1;
@@ -2879,7 +2879,7 @@ DISP_STATUS DISP_Capture_Framebuffer( unsigned int pvbuf, unsigned int bpp, unsi
     
     mutex_unlock(&MemOutSettingMutex);
     MMProfileLogEx(MTKFB_MMP_Events.CaptureFramebuffer, MMProfileFlagPulse, 2, mva);
-    if (is_early_suspended)
+    if (is_power_suspended)
     {
         disp_path_get_mutex();
         disp_path_config_mem_out_without_lcd(&MemOutConfig);
@@ -3143,7 +3143,7 @@ DISP_STATUS DISP_GetLayerInfo(DISP_LAYER_INFO *pLayer)
 
 BOOL fbconfig_dsi_vdo_prepare(void)
 {
-    if ( !is_early_suspended)
+    if ( !is_power_suspended)
     {
         disp_drv_init_context();
         
@@ -3210,7 +3210,7 @@ DISP_STATUS DISP_Change_LCM_Resolution(unsigned int width, unsigned int height)
 }
 
 //for slt 
-DISP_STATUS DISP_Auto_Capture_FB( unsigned int pvbuf, unsigned int wdma_out_fmt,unsigned int bpp, unsigned int is_early_suspended,int wdma_width,int wdma_height)
+DISP_STATUS DISP_Auto_Capture_FB( unsigned int pvbuf, unsigned int wdma_out_fmt,unsigned int bpp, unsigned int is_power_suspended,int wdma_width,int wdma_height)
 {
     pr_debug("DISP_Auto_Capture_FB width %d height %d\n",wdma_width,wdma_height);
 
@@ -3293,7 +3293,7 @@ DISP_STATUS DISP_Auto_Capture_FB( unsigned int pvbuf, unsigned int wdma_out_fmt,
         MemOutConfig.srcROI.height= DISP_GetScreenHeight();
         MemOutConfig.srcROI.width= DISP_GetScreenWidth();
         
-        if (is_early_suspended == 0)
+        if (is_power_suspended == 0)
         {
             disp_path_clear_mem_out_done_flag();  // clear last time mem_out_done flag
             MemOutConfig.dirty = 1;
@@ -3301,7 +3301,7 @@ DISP_STATUS DISP_Auto_Capture_FB( unsigned int pvbuf, unsigned int wdma_out_fmt,
         
         mutex_unlock(&MemOutSettingMutex);
         MMProfileLogEx(MTKFB_MMP_Events.CaptureFramebuffer, MMProfileFlagPulse, 2, mva);
-        if (is_early_suspended)
+        if (is_power_suspended)
         {
             disp_path_get_mutex();
             disp_path_config_mem_out_without_lcd(&MemOutConfig);
@@ -3350,7 +3350,7 @@ Purpose : set mipi clk ,cover cmd mode and video mode
 */
 static BOOL fbconfig_disp_set_clk_prepare(unsigned int clk)
 {
-    if ( !is_early_suspended)
+    if ( !is_power_suspended)
     {
         disp_drv_init_context();
         
@@ -3383,28 +3383,28 @@ void fbconfig_disp_set_mipi_clk(unsigned int clk)
 {
     if(lcm_params->dsi.mode != CMD_MODE)
     {
-        if (down_interruptible(&sem_early_suspend)) {
+        if (down_interruptible(&sem_power_suspend)) {
             pr_err("sxk=>can't get semaphore in fbconfig_disp_set_mipi_clk()\n");
             return ;
         }
         
         fbconfig_disp_set_clk_prepare(clk);	
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
     else{//cmd mode
-        if (down_interruptible(&sem_early_suspend)) {
+        if (down_interruptible(&sem_power_suspend)) {
             pr_err("sxk=>can't get semaphore in fbconfig_disp_set_mipi_clk()\n");
             return ;
         }
         if(fbconfig_if_drv->set_mipi_clk)
             fbconfig_if_drv->set_mipi_clk(clk);//execute :clk setting .....	
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
 }
 
 static BOOL fbconfig_disp_set_ssc_prepare(unsigned int ssc)
 {
-    if ( !is_early_suspended)
+    if ( !is_power_suspended)
     {
         disp_drv_init_context();		
         
@@ -3439,24 +3439,24 @@ void fbconfig_disp_set_mipi_ssc(unsigned int ssc)
 {
     if(lcm_params->dsi.mode != CMD_MODE)
     {
-        if (down_interruptible(&sem_early_suspend)) 
+        if (down_interruptible(&sem_power_suspend)) 
         {
             pr_err("sxk=>can't get semaphore in fbconfig_disp_set_mipi_ssc()\n");
             return ;
         }
         
         fbconfig_disp_set_ssc_prepare(ssc);	
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
     else
     {//cmd mode
-        if (down_interruptible(&sem_early_suspend)) {
+        if (down_interruptible(&sem_power_suspend)) {
             pr_err("sxk=>can't get semaphore in fbconfig_disp_set_mipi_ssc()\n");
             return ;
         }
         if(fbconfig_if_drv->set_spread_frequency)
             fbconfig_if_drv->set_spread_frequency(ssc);//execute :ssc setting .....	
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
 }
 
@@ -3522,7 +3522,7 @@ static int fbconfig_disp_get_esd_prepare(void)
 {
     int ret =0;
 
-    if ( !is_early_suspended)
+    if ( !is_power_suspended)
     {
         disp_drv_init_context();
         
@@ -3556,23 +3556,23 @@ int fbconfig_get_esd_check(void)
 
     if(lcm_params->dsi.mode != CMD_MODE)
     {
-        if (down_interruptible(&sem_early_suspend)) 
+        if (down_interruptible(&sem_power_suspend)) 
         {
             pr_err("sxk=>can't get semaphore in fbconfig_get_esd_check()\n");
             ret= -2;
         }
         ret = fbconfig_disp_get_esd_prepare();
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
     else
     {//cmd mode
-        if (down_interruptible(&sem_early_suspend)) 
+        if (down_interruptible(&sem_power_suspend)) 
         {
             pr_err("sxk=>can't get semaphore in fbconfig_get_esd_check()\n");
             ret= -2;
         }
         ret =fbconfig_get_esd_check_exec();//execute :esd check...	
-        up(&sem_early_suspend);		 
+        up(&sem_power_suspend);		 
     }
 
     return ret ;
@@ -3581,7 +3581,7 @@ int fbconfig_get_esd_check(void)
 
 BOOL fbconfig_rest_lcm_setting_prepare(void)
 {
-    if ( !is_early_suspended)
+    if ( !is_power_suspended)
     {
         disp_drv_init_context();
         

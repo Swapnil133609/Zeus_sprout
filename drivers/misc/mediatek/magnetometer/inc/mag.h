@@ -25,7 +25,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hwmsensor.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/hwmsen_dev.h>
 
 
@@ -125,10 +125,10 @@ struct mag_context {
     struct timer_list   timer;  /* polling timer */
     atomic_t            trace;
 
-    struct early_suspend    early_drv;
+    struct power_suspend    power_drv;
     struct mag_data_path mag_dev_data;
     struct mag_control_path mag_ctl;
-    atomic_t                early_suspend;
+    atomic_t                power_suspend;
     struct mag_drv_obj*    drv_obj[MAX_M_V_SENSOR];
     struct mag_data       drv_data[MAX_M_V_SENSOR];
     bool is_first_data_after_enable;

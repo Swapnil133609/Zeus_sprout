@@ -5,8 +5,8 @@ struct baro_context *baro_context_obj = NULL;
 
 
 static struct baro_init_info* barometer_init_list[MAX_CHOOSE_BARO_NUM]= {0}; //modified
-static void baro_early_suspend(struct early_suspend *h);
-static void baro_late_resume(struct early_suspend *h);
+static void baro_power_suspend(struct power_suspend *h);
+static void baro_power_resume(struct power_suspend *h);
 
 static void baro_work_func(struct work_struct *work)
 {
@@ -677,11 +677,10 @@ static int baro_probe(struct platform_device *pdev)
 		goto exit_alloc_input_dev_failed;
 	}
 
-    atomic_set(&(baro_context_obj->early_suspend), 0);
-	baro_context_obj->early_drv.level    = EARLY_SUSPEND_LEVEL_STOP_DRAWING - 1,
-	baro_context_obj->early_drv.suspend  = baro_early_suspend,
-	baro_context_obj->early_drv.resume   = baro_late_resume,    
-	register_early_suspend(&baro_context_obj->early_drv);
+    atomic_set(&(baro_context_obj->power_suspend), 0);
+	baro_context_obj->power_drv.suspend  = baro_power_suspend,
+	baro_context_obj->power_drv.resume   = baro_power_resume,    
+	register_power_suspend(&baro_context_obj->power_drv);
 
   
 	BARO_LOG("----baro_probe OK !!\n");
@@ -730,17 +729,17 @@ static int baro_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static void baro_early_suspend(struct early_suspend *h) 
+static void baro_power_suspend(struct power_suspend *h) 
 {
-   atomic_set(&(baro_context_obj->early_suspend), 1);
-   BARO_LOG(" baro_early_suspend ok------->hwm_obj->early_suspend=%d \n",atomic_read(&(baro_context_obj->early_suspend)));
+   atomic_set(&(baro_context_obj->power_suspend), 1);
+   BARO_LOG(" baro_power_suspend ok------->hwm_obj->power_suspend=%d \n",atomic_read(&(baro_context_obj->power_suspend)));
    return ;
 }
 /*----------------------------------------------------------------------------*/
-static void baro_late_resume(struct early_suspend *h)
+static void baro_power_resume(struct power_suspend *h)
 {
-   atomic_set(&(baro_context_obj->early_suspend), 0);
-   BARO_LOG(" baro_late_resume ok------->hwm_obj->early_suspend=%d \n",atomic_read(&(baro_context_obj->early_suspend)));
+   atomic_set(&(baro_context_obj->power_suspend), 0);
+   BARO_LOG(" baro_power_resume ok------->hwm_obj->power_suspend=%d \n",atomic_read(&(baro_context_obj->power_suspend)));
    return ;
 }
 

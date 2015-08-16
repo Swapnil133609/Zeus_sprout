@@ -7822,10 +7822,10 @@ static struct synaptics_rmi4_exp_fn fwu_module = {
 	.remove = synaptics_rmi4_fwu_remove,
 	.reset = NULL,
 	.reinit = NULL,
-	.early_suspend = NULL,
+	.power_suspend = NULL,
 	.suspend = NULL,
 	.resume = NULL,
-	.late_resume = NULL,
+	.power_resume = NULL,
 	.attn = synaptics_rmi4_fwu_attn,
 };
 

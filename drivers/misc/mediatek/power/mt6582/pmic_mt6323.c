@@ -55,7 +55,7 @@
 #include <linux/syscalls.h>
 #include <linux/sched.h>
 #include <linux/writeback.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/version.h>
 
 #include <asm/uaccess.h>
@@ -3792,10 +3792,10 @@ static struct platform_driver mt_pmic_driver = {
 };
 
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void pmic_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_POWERSUSPEND
+static void pmic_power_suspend(struct power_suspend *h)
 {
-	xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "******** MT6323 pmic driver early suspend!! ********\n" );
+	xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "******** MT6323 pmic driver power suspend!! ********\n" );
 	upmu_set_rg_vref18_enb(0);
 	//upmu_set_rg_adc_deci_gdly(0);
 	upmu_set_rg_clksq_en_aux(1);
@@ -3808,9 +3808,9 @@ static void pmic_early_suspend(struct early_suspend *h)
 
 }
 
-static void pmic_early_resume(struct early_suspend *h)
+static void pmic_power_resume(struct power_suspend *h)
 {
-	xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "******** MT6323 pmic driver early resume!! ********\n" );
+	xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "******** MT6323 pmic driver power resume!! ********\n" );
 	upmu_set_rg_vref18_enb(0);
 	//upmu_set_rg_adc_deci_gdly(0);
 	upmu_set_rg_clksq_en_aux(1);
@@ -3823,10 +3823,9 @@ static void pmic_early_resume(struct early_suspend *h)
 
 }
 
-static struct early_suspend pmic_early_suspend_desc = {
-	.level		= EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1,
-	.suspend	= pmic_early_suspend,
-	.resume		= pmic_early_resume,
+static struct power_suspend pmic_power_suspend_desc = {
+	.suspend	= pmic_power_suspend,
+	.resume		= pmic_power_resume,
 };
 #endif
 
@@ -3866,8 +3865,8 @@ static int __init pmic_mt6323_init(void)
             return ret;
     }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&pmic_early_suspend_desc);
+#ifdef CONFIG_POWERSUSPEND
+	register_power_suspend(&pmic_power_suspend_desc);
 #endif
 
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "****[pmic_mt6323_init] Initialization : DONE !!\n");

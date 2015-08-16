@@ -2016,7 +2016,6 @@ MTKSTP_PSM_T *stp_psm_init(void)
 
     stp_psm->work_state = ACT;
     stp_psm->wmt_notify = wmt_lib_ps_stp_cb;
-	stp_psm->is_wmt_quick_ps_support = wmt_lib_is_quick_ps_support;
     stp_psm->idle_time_to_sleep = STP_PSM_IDLE_TIME_SLEEP;
     stp_psm->flag.data = 0;
     stp_psm->stp_tx_cb = NULL;

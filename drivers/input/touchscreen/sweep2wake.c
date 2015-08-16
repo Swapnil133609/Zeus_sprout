@@ -35,10 +35,10 @@
 #define WAKE_HOOKS_DEFINED
 
 #ifndef WAKE_HOOKS_DEFINED
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 #include <linux/lcd_notify.h>
 #else
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #endif
 #endif
 
@@ -111,7 +111,7 @@ static bool exec_count = true;
 bool s2w_scr_suspended = false;
 static bool scr_on_touch = false, barrier[2] = {false, false};
 #ifndef WAKE_HOOKS_DEFINED
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 static struct notifier_block s2w_lcd_notif;
 #endif
 #endif
@@ -371,7 +371,7 @@ static struct input_handler s2w_input_handler = {
 };
 
 #ifndef WAKE_HOOKS_DEFINED
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 static int lcd_notifier_callback(struct notifier_block *this,
 				unsigned long event, void *data)
 {
@@ -389,18 +389,17 @@ static int lcd_notifier_callback(struct notifier_block *this,
 	return 0;
 }
 #else
-static void s2w_early_suspend(struct early_suspend *h) {
+static void s2w_power_suspend(struct power_suspend *h) {
 	s2w_scr_suspended = true;
 }
 
-static void s2w_late_resume(struct early_suspend *h) {
+static void s2w_power_resume(struct power_suspend *h) {
 	s2w_scr_suspended = false;
 }
 
-static struct early_suspend s2w_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	.suspend = s2w_early_suspend,
-	.resume = s2w_late_resume,
+static struct power_suspend s2w_power_suspend_handler = {
+	.suspend = s2w_power_suspend,
+	.resume = s2w_power_resume,
 };
 #endif
 #endif
@@ -505,13 +504,13 @@ static int __init sweep2wake_init(void)
 		pr_err("%s: Failed to register s2w_input_handler\n", __func__);
 
 #ifndef WAKE_HOOKS_DEFINED
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	s2w_lcd_notif.notifier_call = lcd_notifier_callback;
 	if (lcd_register_client(&s2w_lcd_notif) != 0) {
 		pr_err("%s: Failed to register lcd callback\n", __func__);
 	}
 #else
-	register_early_suspend(&s2w_early_suspend_handler);
+	register_power_suspend(&s2w_power_suspend_handler);
 #endif
 #endif
 
@@ -543,7 +542,7 @@ static void __exit sweep2wake_exit(void)
 	kobject_del(android_touch_kobj);
 #endif
 #ifndef WAKE_HOOKS_DEFINED
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	lcd_unregister_client(&s2w_lcd_notif);
 #endif
 #endif

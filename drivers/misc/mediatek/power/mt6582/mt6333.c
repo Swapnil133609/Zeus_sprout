@@ -18,7 +18,7 @@
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/kobject.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <generated/autoconf.h>
 #include <linux/kernel.h>
 #include <linux/init.h>

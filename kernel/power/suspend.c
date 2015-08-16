@@ -32,7 +32,7 @@
 
 struct pm_sleep_state pm_states[PM_SUSPEND_MAX] = {
 //<20130327> <marc.huang> merge from android kernel 3.0 - add [PM_SUSPEND_ON] into pm_states
-#ifdef CONFIG_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	[PM_SUSPEND_ON] = { .label = "on", },
 #endif
 	[PM_SUSPEND_FREEZE] = { .label = "freeze", .state = PM_SUSPEND_FREEZE },

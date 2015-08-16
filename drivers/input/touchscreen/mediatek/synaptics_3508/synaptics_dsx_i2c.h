@@ -30,8 +30,8 @@
 #define SYNAPTICS_DSX_DRIVER_VERSION 0x2000
 
 #include <linux/version.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38))
@@ -190,10 +190,10 @@ struct synaptics_rmi4_device_info {
  * @rmi4_mod_info: device information
  * @regulator: pointer to associated regulator
  * @rmi4_io_ctrl_mutex: mutex for i2c i/o control
- * @early_suspend: instance to support early suspend power management
+ * @power_suspend: instance to support power suspend power management
  * @current_page: current page in sensor to acess
  * @button_0d_enabled: flag for 0d button support
- * @full_pm_cycle: flag for full power management cycle in early suspend stage
+ * @full_pm_cycle: flag for full power management cycle in power suspend stage
  * @num_of_intr_regs: number of interrupt registers
  * @f01_query_base_addr: query base address for f01
  * @f01_cmd_base_addr: command base address for f01
@@ -218,8 +218,8 @@ struct synaptics_rmi4_data {
 	struct regulator *regulator;
 	struct mutex rmi4_reset_mutex;
 	struct mutex rmi4_io_ctrl_mutex;
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 	unsigned char current_page;
 	unsigned char button_0d_enabled;
@@ -262,10 +262,10 @@ struct synaptics_rmi4_exp_fn {
 	void (*remove)(struct synaptics_rmi4_data *rmi4_data);
 	void (*reset)(struct synaptics_rmi4_data *rmi4_data);
 	void (*reinit)(struct synaptics_rmi4_data *rmi4_data);
-	void (*early_suspend)(struct synaptics_rmi4_data *rmi4_data);
+	void (*power_suspend)(struct synaptics_rmi4_data *rmi4_data);
 	void (*suspend)(struct synaptics_rmi4_data *rmi4_data);
 	void (*resume)(struct synaptics_rmi4_data *rmi4_data);
-	void (*late_resume)(struct synaptics_rmi4_data *rmi4_data);
+	void (*power_resume)(struct synaptics_rmi4_data *rmi4_data);
 	void (*attn)(struct synaptics_rmi4_data *rmi4_data,
 			unsigned char intr_mask);
 };

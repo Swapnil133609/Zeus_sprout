@@ -205,7 +205,7 @@ static struct i2c_driver tpd_i2c_driver = {
 };
 
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static ssize_t synaptics_rmi4_full_pm_cycle_show(struct device *dev,
         struct device_attribute *attr, char *buf);
 
@@ -243,7 +243,7 @@ struct kobject *properties_kobj_driver;
 
 
 static struct device_attribute attrs[] = {
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
     __ATTR(full_pm_cycle, 0660,
             synaptics_rmi4_full_pm_cycle_show,
             synaptics_rmi4_full_pm_cycle_store),
@@ -275,7 +275,7 @@ static struct list_head exp_fn_list;
 static struct synaptics_rmi4_f51_handle *f51;
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static ssize_t synaptics_rmi4_full_pm_cycle_show(struct device *dev,
         struct device_attribute *attr, char *buf)
 {
@@ -1999,7 +1999,7 @@ static int tpd_local_init(void)
 
 extern atomic_t Firmware_Update_Flag;
 
-static void tpd_resume(struct early_suspend *h)
+static void tpd_resume(struct power_suspend *h)
 {
     TPD_DEBUG("TPD wake up\n");
 
@@ -2014,7 +2014,7 @@ static void tpd_resume(struct early_suspend *h)
     return;
 }
 
-static void tpd_suspend(struct early_suspend *h)
+static void tpd_suspend(struct power_suspend *h)
 {
     TPD_DEBUG("TPD enter sleep\n");
     if(atomic_read(&Firmware_Update_Flag))

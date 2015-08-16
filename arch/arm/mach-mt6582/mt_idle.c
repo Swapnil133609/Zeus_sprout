@@ -33,6 +33,7 @@
 #include <mach/mt_cpufreq.h>
 #include <mach/mt_power_gs.h>
 #include <mach/mt_ptp.h>
+#include <linux/powersuspend.h>
 
 #define USING_XLOG
 
@@ -394,11 +395,6 @@ static bool dpidle_can_enter(void)
         goto out;
     }
 #endif
-
-    if (!mt_cpufreq_earlysuspend_status_get()){
-        reason = BY_VTG;
-        goto out;
-    }
 
     //if ((smp_processor_id() != 0) || (num_online_cpus() != 1)) {
     if (atomic_read(&hotplug_cpu_count) != 1) {

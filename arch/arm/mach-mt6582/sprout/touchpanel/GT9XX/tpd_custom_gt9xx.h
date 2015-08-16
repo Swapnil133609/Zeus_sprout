@@ -33,8 +33,8 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/byteorder/generic.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <linux/interrupt.h>
 #include <linux/time.h>
@@ -69,7 +69,7 @@ struct goodix_ts_data
     struct input_dev  *input_dev;
     struct hrtimer timer;
     struct work_struct  work;
-    struct early_suspend early_suspend;
+    struct power_suspend power_suspend;
     s32 irq_is_disable;
     s32 use_irq;
     u16 abs_x_max;

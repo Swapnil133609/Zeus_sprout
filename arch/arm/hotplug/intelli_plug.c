@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  */
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
@@ -23,8 +23,8 @@
 #include <linux/input.h>
 #include <linux/cpufreq.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 //#define DEBUG_INTELLI_PLUG
@@ -312,7 +312,7 @@ void __ref intelli_plug_perf_boost(bool on)
 	}
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static void screen_off_limit(bool on)
 {
 	unsigned int i, ret;
@@ -341,7 +341,7 @@ static void screen_off_limit(bool on)
 	}
 }
 
-static void intelli_plug_early_suspend(struct early_suspend *handler)
+static void intelli_plug_power_suspend(struct power_suspend *handler)
 {
 	int cpu;
 	
@@ -374,7 +374,7 @@ static void wakeup_boost(void)
 	}
 }
 
-static void __ref intelli_plug_late_resume(struct early_suspend *handler)
+static void __ref intelli_plug_power_resume(struct power_suspend *handler)
 {
 	int num_of_active_cores;
 	int i;
@@ -399,12 +399,11 @@ static void __ref intelli_plug_late_resume(struct early_suspend *handler)
 		msecs_to_jiffies(10));
 }
 
-static struct early_suspend intelli_plug_early_suspend_struct_driver = {
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-	.suspend = intelli_plug_early_suspend,
-	.resume = intelli_plug_late_resume,
+static struct power_suspend intelli_plug_power_suspend_struct_driver = {
+	.suspend = intelli_plug_power_suspend,
+	.resume = intelli_plug_power_resume,
 };
-#endif	/* CONFIG_HAS_EARLYSUSPEND */
+#endif	/* CONFIG_POWERSUSPEND */
 
 static void intelli_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -507,8 +506,8 @@ int __init intelli_plug_init(void)
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 		msecs_to_jiffies(10));
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&intelli_plug_early_suspend_struct_driver);
+#ifdef CONFIG_POWERSUSPEND
+	register_power_suspend(&intelli_plug_power_suspend_struct_driver);
 #endif
 	return 0;
 }

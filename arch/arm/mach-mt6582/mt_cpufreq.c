@@ -23,7 +23,7 @@
 #include <linux/proc_fs.h>
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/spinlock.h>
 #include <linux/kthread.h>
 #include <linux/hrtimer.h>
@@ -83,10 +83,9 @@ do {                                                                \
 
 #define ARRAY_AND_SIZE(x)	(x), ARRAY_SIZE(x)
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static struct early_suspend mt_cpufreq_early_suspend_handler =
+#ifdef CONFIG_POWERSUSPEND
+static struct power_suspend mt_cpufreq_power_suspend_handler =
 {
-    .level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 200,
     .suspend = NULL,
     .resume  = NULL,
 };
@@ -178,7 +177,7 @@ static bool mt_cpufreq_pause = false;
 static bool mt_cpufreq_ptpod_disable = false;
 static bool mt_cpufreq_ptpod_voltage_down = false;
 //static bool mt_cpufreq_max_freq_overdrive = false;
-static bool mt_cpufreq_earlysuspend_allow_deepidle_control_vproc = false;
+static bool mt_cpufreq_powersuspend_allow_deepidle_control_vproc = false;
 static bool mt_cpufreq_freq_table_allocated = false;
 
 /* pmic volt by PTP-OD */
@@ -378,13 +377,13 @@ extern void (*cpufreq_freq_check)(enum mt_cpu_dvfs_id id); // TODO: ask Marc to 
 #define A_4_CORE (P_MCU_D + P_CA7_D_4_CORE) // MCU dynamic power for 4 cores turned on
 
 /*************************************************************************************
-* Only if dvfs enter earlysuspend and set 1.1GHz/1.15V, deep idle could control VPROC.
+* Only if dvfs enter powersuspend and set 1.1GHz/1.15V, deep idle could control VPROC.
 **************************************************************************************/
-bool mt_cpufreq_earlysuspend_status_get(void)
+bool mt_cpufreq_powersuspend_status_get(void)
 {
-    return mt_cpufreq_earlysuspend_allow_deepidle_control_vproc;
+    return mt_cpufreq_powersuspend_allow_deepidle_control_vproc;
 }
-EXPORT_SYMBOL(mt_cpufreq_earlysuspend_status_get);
+EXPORT_SYMBOL(mt_cpufreq_powersuspend_status_get);
 
 #if 0
 /* Check the mapping for DVFS voltage and pmic wrap voltage */
@@ -1405,29 +1404,29 @@ static struct cpufreq_driver mt_cpufreq_driver = {
 };
 
 /*********************************
-* early suspend callback function
+* power suspend callback function
 **********************************/
-void mt_cpufreq_early_suspend(struct early_suspend *h)
+void mt_cpufreq_power_suspend(struct power_suspend *h)
 {
     #ifndef MT_DVFS_RANDOM_TEST
 
     mt_cpufreq_state_set(0);
 
     /* Deep idle could control vproc now. */
-    mt_cpufreq_earlysuspend_allow_deepidle_control_vproc = true;
+    mt_cpufreq_powersuspend_allow_deepidle_control_vproc = true;
     #endif
 
     return;
 }
 
 /*******************************
-* late resume callback function
+* power resume callback function
 ********************************/
-void mt_cpufreq_late_resume(struct early_suspend *h)
+void mt_cpufreq_power_resume(struct power_suspend *h)
 {
     #ifndef MT_DVFS_RANDOM_TEST
     /* Deep idle could NOT control vproc now. */
-    mt_cpufreq_earlysuspend_allow_deepidle_control_vproc = false;
+    mt_cpufreq_powersuspend_allow_deepidle_control_vproc = false;
 
     mt_cpufreq_state_set(1);
 
@@ -2263,10 +2262,10 @@ static ssize_t mt_cpufreq_ptpod_test_write(struct file *file, const char *buffer
 ********************************************/
 static int mt_cpufreq_pdrv_probe(struct platform_device *pdev)
 {
-    #ifdef CONFIG_HAS_EARLYSUSPEND
-    mt_cpufreq_early_suspend_handler.suspend = mt_cpufreq_early_suspend;
-    mt_cpufreq_early_suspend_handler.resume = mt_cpufreq_late_resume;
-    register_early_suspend(&mt_cpufreq_early_suspend_handler);
+    #ifdef CONFIG_POWERSUSPEND
+    mt_cpufreq_power_suspend_handler.suspend = mt_cpufreq_power_suspend;
+    mt_cpufreq_power_suspend_handler.resume = mt_cpufreq_power_resume;
+    register_power_suspend(&mt_cpufreq_power_suspend_handler);
     #endif
 
     /************************************************

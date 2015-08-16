@@ -15,7 +15,7 @@
 #include "mtk_mali_kernel.h"
 #include "mali_kernel_common.h" /*for mali printf*/
 #include <mach/mt_clkmgr.h>     /*For MFG sub-system clock control API*/
-#include <linux/earlysuspend.h> /*For early suspend*/
+#include <linux/powersuspend.h> /*For power suspend*/
 #include <mach/mt_clkmgr.h>
 
 void MTKMALI_DumpRegister( void )

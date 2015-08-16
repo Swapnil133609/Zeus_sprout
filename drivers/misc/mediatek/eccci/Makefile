@@ -9,6 +9,7 @@ $(warning ECCCI core compiling for MT6290 CLDMA mode)
 	ccflags-y += -DMT6290
 else
 	ifneq ($(CONFIG_MTK_ECCCI_UT), y)
+$(warning ECCCI core compiling for MT65XX CLDMA mode)
 	else
 $(warning ECCCI core compiling for UT mode)
 	endif

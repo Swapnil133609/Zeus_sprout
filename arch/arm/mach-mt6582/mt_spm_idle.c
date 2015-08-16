@@ -18,7 +18,7 @@
 #include <linux/spinlock.h>
 #include <linux/proc_fs.h>
 #include <linux/platform_device.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/sched.h>
 #include <linux/kthread.h>
 #include <linux/err.h>

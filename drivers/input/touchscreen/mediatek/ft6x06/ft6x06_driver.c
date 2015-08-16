@@ -800,7 +800,7 @@ err_check_functionality_failed:
     return 0;
 }
 
-static void tpd_resume(struct early_suspend *h)
+static void tpd_resume(struct power_suspend *h)
 {
     char data;
 
@@ -858,7 +858,7 @@ void ft6x06_complete_unfinished_event( void )
     input_sync(tpd->dev);
 }
 
-static void tpd_suspend(struct early_suspend *h)
+static void tpd_suspend(struct power_suspend *h)
  {
     int ret = 0;
     int iRetry = 5;

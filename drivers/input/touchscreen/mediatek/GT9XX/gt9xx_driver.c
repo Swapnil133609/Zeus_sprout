@@ -1607,7 +1607,7 @@ static s8 gtp_wakeup_sleep(struct i2c_client *client)
 }
 
 /* Function to manage low power suspend */
-static void tpd_suspend(struct early_suspend *h)
+static void tpd_suspend(struct power_suspend *h)
 {
 	s32 ret = -1;
 	mutex_lock(&i2c_access);
@@ -1617,7 +1617,7 @@ static void tpd_suspend(struct early_suspend *h)
 
 	ret = gtp_enter_sleep(i2c_client_point);
 	if (ret < 0) {
-		GTP_ERROR("GTP early suspend failed.");
+		GTP_ERROR("GTP power suspend failed.");
 	}
 #if GTP_ESD_PROTECT
 	cancel_delayed_work_sync(&gtp_esd_check_work);
@@ -1635,14 +1635,14 @@ static void tpd_suspend(struct early_suspend *h)
 }
 
 /* Function to manage power-on resume */
-static void tpd_resume(struct early_suspend *h)
+static void tpd_resume(struct power_suspend *h)
 {
 	s32 ret = -1;
 
 	ret = gtp_wakeup_sleep(i2c_client_point);
 
 	if (ret < 0) {
-		GTP_ERROR("GTP later resume failed.");
+		GTP_ERROR("GTP power resume failed.");
 	}
 
 	GTP_INFO("GTP wakeup sleep.");

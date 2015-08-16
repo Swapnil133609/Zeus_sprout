@@ -12,7 +12,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hwmsensor.h>
-#include <linux/earlysuspend.h> 
+#include <linux/powersuspend.h> 
 #include <linux/hwmsen_dev.h>
 #include <barometer_factory.h>
 
@@ -90,8 +90,8 @@ struct baro_context {
 	struct timer_list   timer;  /* polling timer */
 	atomic_t            trace;
 
-	struct early_suspend    early_drv;
-	atomic_t                early_suspend;
+	struct power_suspend    power_drv;
+	atomic_t                power_suspend;
 
 	struct baro_data       drv_data;
 	struct baro_control_path   baro_ctl;

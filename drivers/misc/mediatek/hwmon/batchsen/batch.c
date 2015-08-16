@@ -17,8 +17,8 @@ static DEFINE_MUTEX(batch_data_mutex);
 static struct batch_context *batch_context_obj = NULL;
 
 
-static void batch_early_suspend(struct early_suspend *h);
-static void batch_late_resume(struct early_suspend *h);
+static void batch_power_suspend(struct power_suspend *h);
+static void batch_power_resume(struct power_suspend *h);
 
 static int register_eint_unmask(void)
 {
@@ -491,11 +491,10 @@ static int batch_probe(struct platform_device *pdev)
         goto exit_alloc_input_dev_failed;
     }
 
-        atomic_set(&(batch_context_obj->early_suspend), 0);
-    batch_context_obj->early_drv.level    = EARLY_SUSPEND_LEVEL_STOP_DRAWING - 1,
-    batch_context_obj->early_drv.suspend  = batch_early_suspend,
-    batch_context_obj->early_drv.resume   = batch_late_resume,
-    register_early_suspend(&batch_context_obj->early_drv);
+        atomic_set(&(batch_context_obj->power_suspend), 0);
+    batch_context_obj->power_drv.suspend  = batch_power_suspend,
+    batch_context_obj->power_drv.resume   = batch_power_resume,
+    register_power_suspend(&batch_context_obj->power_drv);
 
     wake_lock_init(&(batch_context_obj->read_data_wake_lock),WAKE_LOCK_SUSPEND,"read_data_wake_lock");
 
@@ -563,17 +562,17 @@ static int batch_remove(struct platform_device *pdev)
     return 0;
 }
 
-static void batch_early_suspend(struct early_suspend *h)
+static void batch_power_suspend(struct power_suspend *h)
 {
-   atomic_set(&(batch_context_obj->early_suspend), 1);
-   BATCH_LOG(" batch_early_suspend ok------->hwm_obj->early_suspend=%d \n",atomic_read(&(batch_context_obj->early_suspend)));
+   atomic_set(&(batch_context_obj->power_suspend), 1);
+   BATCH_LOG(" batch_power_suspend ok------->hwm_obj->power_suspend=%d \n",atomic_read(&(batch_context_obj->power_suspend)));
    return ;
 }
 /*----------------------------------------------------------------------------*/
-static void batch_late_resume(struct early_suspend *h)
+static void batch_power_resume(struct power_suspend *h)
 {
-   atomic_set(&(batch_context_obj->early_suspend), 0);
-   BATCH_LOG(" batch_late_resume ok------->hwm_obj->early_suspend=%d \n",atomic_read(&(batch_context_obj->early_suspend)));
+   atomic_set(&(batch_context_obj->power_suspend), 0);
+   BATCH_LOG(" batch_power_resume ok------->hwm_obj->power_suspend=%d \n",atomic_read(&(batch_context_obj->power_suspend)));
    return ;
 }
 

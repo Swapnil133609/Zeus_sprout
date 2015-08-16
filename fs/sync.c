@@ -22,7 +22,7 @@
 #endif
 
 #ifdef CONFIG_DYNAMIC_FSYNC
-extern bool early_suspend_active;
+extern bool power_suspend_active;
 extern bool dyn_fsync_active;
 #endif
 
@@ -235,7 +235,7 @@ int vfs_fsync(struct file *file, int datasync)
 		return 0;
 
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (likely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !power_suspend_active))
 		return 0;
 	else {
 #endif
@@ -365,7 +365,7 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 		return 0;
 
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (likely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !power_suspend_active))
 		return 0;
 	else
 #endif
@@ -374,14 +374,14 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
-	if (!fsync_enabled)
-		return 0;
-
 #if 0
-	if (likely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !power_suspend_active))
 		return 0;
 	else
 #endif
+	if (!fsync_enabled)
+		return 0;
+
 	return do_fsync(fd, 1);
 }
 
@@ -456,7 +456,7 @@ SYSCALL_DEFINE4(sync_file_range, int, fd, loff_t, offset, loff_t, nbytes,
 				unsigned int, flags)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-if (likely(dyn_fsync_active && !early_suspend_active))
+if (likely(dyn_fsync_active && !power_suspend_active))
 return 0;
 else {
 #endif
@@ -553,7 +553,7 @@ SYSCALL_DEFINE4(sync_file_range2, int, fd, unsigned int, flags,
 				 loff_t, offset, loff_t, nbytes)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (likely(dyn_fsync_active && !early_suspend_active))
+	if (likely(dyn_fsync_active && !power_suspend_active))
 		return 0;
 	else
 #endif

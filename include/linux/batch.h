@@ -25,7 +25,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hwmsensor.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/string.h>
 #include <linux/hwmsen_dev.h>
 
@@ -98,9 +98,9 @@ struct batch_context {
     struct timer_list   timer;  /* polling timer */
     atomic_t            trace;
 
-    struct early_suspend    early_drv;
+    struct power_suspend    power_drv;
     struct wake_lock        read_data_wake_lock;
-    atomic_t                early_suspend;
+    atomic_t                power_suspend;
 
     struct batch_dev_list     dev_list;
 

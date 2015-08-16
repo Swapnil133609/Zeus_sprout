@@ -396,7 +396,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
                const char *buf, size_t n)
 {
 #ifdef CONFIG_SUSPEND
-#ifdef CONFIG_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
     suspend_state_t state = PM_SUSPEND_ON;
 #else
     suspend_state_t state = PM_SUSPEND_STANDBY;
@@ -426,13 +426,6 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
     if (len == 4 && !strncmp(buf, "disk", len)) {
 #ifdef CONFIG_MTK_HIBERNATION
         hib_log("trigger hibernation...\n");
-#ifdef CONFIG_EARLYSUSPEND
-        if (PM_SUSPEND_ON == get_suspend_state()) {
-            hib_warn("\"on\" to \"disk\" (i.e., 0->4) is not supported !!!\n");
-            error = -EINVAL;
-            goto Exit;
-        }
-#endif
         if (!pre_hibernate()) {
             error = 0;
             error = mtk_hibernate();
@@ -448,17 +441,7 @@ static ssize_t state_store(struct kobject *kobj, struct kobj_attribute *attr,
         if (len == strlen(pm_states[state].label) && !strncmp(buf, pm_states[state].label, len))
             break;
     }
-    if (state < PM_SUSPEND_MAX) {
-#ifdef CONFIG_EARLYSUSPEND
-        if (state == PM_SUSPEND_ON || pm_states[state].state) {
-            error = 0;
-            request_suspend_state(state);
-        } else
-            error = -EINVAL;
-#else
-        error = enter_state(state);
-#endif
-    }
+    if (state < PM_SUSPEND_MAX);
 #endif
 
  Exit:

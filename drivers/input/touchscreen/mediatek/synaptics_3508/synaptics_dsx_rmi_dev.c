@@ -766,10 +766,10 @@ static struct synaptics_rmi4_exp_fn rmidev_module = {
 	.remove = rmidev_remove_device,
 	.reset = NULL,
 	.reinit = NULL,
-	.early_suspend = NULL,
+	.power_suspend = NULL,
 	.suspend = NULL,
 	.resume = NULL,
-	.late_resume = NULL,
+	.power_resume = NULL,
 	.attn = NULL,
 };
 

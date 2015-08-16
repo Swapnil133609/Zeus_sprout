@@ -35,7 +35,7 @@
 extern LCM_PARAMS *lcm_params;
 extern LCM_DRIVER *lcm_drv;
 extern LCM_UTIL_FUNCS fbconfig_lcm_utils;
-extern BOOL is_early_suspended;
+extern BOOL is_power_suspended;
 extern FBCONFIG_DISP_IF * fbconfig_if_drv;
 BOOL fbconfig_start_LCM_config;
 #define FBCONFIG_MDELAY(n)	(fbconfig_lcm_utils.mdelay((n)))
@@ -96,7 +96,7 @@ CONFIG_RECORD  * backup_head =NULL;
 int esd_check_addr;
 int esd_check_para_num;
 char * esd_check_buffer =NULL;
-extern struct semaphore sem_early_suspend;
+extern struct semaphore sem_power_suspend;
 extern void fbconfig_disp_set_mipi_timing(MIPI_TIMING timing);
 extern unsigned int fbconfig_get_layer_info(FBCONFIG_LAYER_INFO *layers);
 extern unsigned int fbconfig_get_layer_vaddr(int layer_id,int * layer_size,int * enable);
@@ -324,20 +324,20 @@ static void fbconfig_reset_lcm_setting(void)
     
     if(lcm_params->dsi.mode != CMD_MODE)
     {
-        if (down_interruptible(&sem_early_suspend)) {
+        if (down_interruptible(&sem_power_suspend)) {
             pr_err("sxk=>can't get semaphore in fbconfig_reset_lcm_setting()\n");
             return;
         }
         fbconfig_rest_lcm_setting_prepare();//video mode	
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
     else{//cmd mode
-        if (down_interruptible(&sem_early_suspend)) {
+        if (down_interruptible(&sem_power_suspend)) {
             pr_err("sxk=>can't get semaphore in execute_cmd()\n");
             return;
         }
         lcm_drv->init();
-        up(&sem_early_suspend);
+        up(&sem_power_suspend);
     }
 }
 
@@ -573,7 +573,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
         }
         case MIPI_SET_TIMING:
         {
-            if (!is_early_suspended)
+            if (!is_power_suspended)
             {
                 MIPI_TIMING timing;		
                 if(copy_from_user(&timing,(void __user*)argp,sizeof(timing)))
@@ -728,22 +728,22 @@ if(lcm_params->dsi.mode != CMD_MODE)
 {
 pr_debug("sxk=>01will exec cmd!! in fbconfig_release()\n");
 
-if (down_interruptible(&sem_early_suspend)) {
+if (down_interruptible(&sem_power_suspend)) {
                 pr_err("sxk=>can't get semaphore in execute_cmd()\n");
 				return 0;
 		   }
 fbconfig_dsi_vdo_prepare();//video mode
 pr_debug("sxk=>FINISH!!\n");
 
-up(&sem_early_suspend);
+up(&sem_power_suspend);
 }
 else{//cmd mode
-if (down_interruptible(&sem_early_suspend)) {
+if (down_interruptible(&sem_power_suspend)) {
             pr_err("sxk=>can't get semaphore in execute_cmd()\n");
             return 0;
        }
 fb_config_execute_cmd();
-up(&sem_early_suspend);
+up(&sem_power_suspend);
 }
 #endif
 /*free the memory .....*/

@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hwmsensor.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/hwmsen_dev.h>
 
 
@@ -124,8 +124,8 @@ struct alsps_context {
     atomic_t                    delay_als; /*als polling period for reporting input event*/
     atomic_t                delay_ps;/*ps polling period for reporting input event*/
     atomic_t                    wake;  /*user-space request to wake-up, used with stop*/
-    atomic_t                    early_suspend;
-    struct early_suspend   early_drv;
+    atomic_t                    power_suspend;
+    struct power_suspend   power_drv;
     struct alsps_data           drv_data;
     struct als_control_path    als_ctl;
     struct als_data_path       als_data;

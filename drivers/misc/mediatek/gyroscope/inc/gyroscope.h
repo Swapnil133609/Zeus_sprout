@@ -25,7 +25,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hwmsensor.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/hwmsen_dev.h>
 
 
@@ -103,8 +103,8 @@ struct gyro_context {
     struct timer_list   timer;  /* polling timer */
     atomic_t            trace;
 
-    struct early_suspend    early_drv;
-    atomic_t                early_suspend;
+    struct power_suspend    power_drv;
+    atomic_t                power_suspend;
     //struct gyro_drv_obj    drv_obj;
     struct gyro_data       drv_data;
     struct gyro_control_path   gyro_ctl;
