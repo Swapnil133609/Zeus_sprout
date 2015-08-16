@@ -107,13 +107,6 @@
 #include <mach/mtk_wcn_cmb_stub.h>
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#include <linux/input/wake_helpers.h>
-int headset_plugged_in = 0;
-int var_is_earpiece_on = 0;
-int var_is_headset_in_use = 0;
-#endif
-
 #if defined(MTK_MT5192) || defined(MTK_MT5193)
 extern int cust_matv_gpio_on(void);
 extern int cust_matv_gpio_off(void);
@@ -299,26 +292,15 @@ static void power_init(void)
 
 bool GetHeadPhoneState(void)
 {
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-		var_is_headset_in_use = 1;
-		var_is_earpiece_on = 1;
-#endif
     uint32 HPAna_reg = 0;
     if (Aud_ANA_Clk_cntr == true)
     {
         HPAna_reg = Ana_Get_Reg(AUDTOP_CON4);
         if (HPAna_reg & 0x60)
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-		var_is_headset_in_use = 0;
-		var_is_earpiece_on = 0;
-#endif
         {
             return true;
         }
     }
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	pr_info("%s: set wake_helper var_is_headset_in_use: %d\n", __func__, var_is_headset_in_use);
-#endif
     return false;
 }
 
