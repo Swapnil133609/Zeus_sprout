@@ -19,3 +19,37 @@ config ASMP
 	  Automatically hotplugs the multiple cpu cores on and off
 	  based on cpu load and suspend state
 
+config ZEN_DECISION
+	bool "Zen Decision: MSM Userspace Handler"
+	depends on SMP && FB
+	default n
+	help
+	  MSM/Qcomm devices have multiple userspace applications that handle
+	  CPU hotplugging and frequency operations.
+
+	  ZenDecision is a partial resolution to handling behavior caused by
+	  disabling some of these services.
+
+	  For example, If MPDecision is disabled and MSM-Thermal_Engine is 
+	  enabled in the userspace. Situations where CPUs go offline but never
+	  come back online occur.
+  
+	  ZenDecision ensures all CPUs are online when they are supposed to be by:
+	  - Enable all CPUs when screen comes on after zen_wake_delay
+	  - Ignore all CPU_UP operations when battery level is <= 15% to respect
+	    the decision made by MSMThermal (which disables cores at <= 15% battery)
+
+	  Thresholds and driver enable/disable for above values can be found in:
+	  /sys/kernel/zen_decision
+
+	  ZenDecision is not a direct replacement for any of the MSM userspace
+	  services.
+
+	  If unsure, say N.
+
+config FAST_HOTPLUG
+	bool "Enable fast hotplug"
+	default n
+	help
+	  Kernel based core control.	  	  
+
