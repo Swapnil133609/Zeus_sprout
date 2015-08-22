@@ -238,7 +238,7 @@ static void plug_out(int online_cpu_count){
 /*
  * Main function of the hotplug
  */
-static void hotplug(struct work_struct *work){
+static void __refdata hotplug(struct work_struct *work){
 	int online_cpu_count;
 	unsigned long load = avg_nr_running();
 
@@ -385,7 +385,7 @@ static struct input_handler hotplug_input_handler = {
 	.id_table       = hotplug_ids,
 };
 
-static int enable_fast_hotplug(const char *val, const struct kernel_param *kp){
+static int __refdata enable_fast_hotplug(const char *val, const struct kernel_param *kp){
 	int cpu;
 	int ret = param_set_bool(val, kp);
 	int rc;
@@ -452,7 +452,7 @@ static void hotplug_early_suspend(struct early_suspend *h) {
 	}
 }
 
-static void hotplug_late_resume(struct early_suspend *h) {
+static void __refdata hotplug_late_resume(struct early_suspend *h) {
 	if(fast_hotplug_enabled){
 #ifdef DEBUG_ENABLED
 		pr_info(HOTPLUG_INFO_TAG"Screen on, let's boost the cpu !");
