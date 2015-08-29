@@ -189,7 +189,7 @@ FUNC(swsusp_arch_suspend)
 	/* restore return address */
 	ldr	r3, .Lsaved_context_r14_svc
 	ldr	lr, [r3]
-	ret	lr
+	mov	pc, lr
 
 	WORD_ADDR(saved_context_r0)
 	WORD_ADDR(saved_cpsr)
@@ -333,7 +333,7 @@ FUNC(swsusp_arch_resume)
 	/* restore return address */
 	ldr	r3, .Lsaved_context_r14_svc
 	ldr	lr, [r3]
-	ret	lr
+	mov	pc, lr
 
 	WORD_ADDR(restore_pblist)
 
