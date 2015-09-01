@@ -1304,8 +1304,9 @@ static int zz_get_next_freq(unsigned int curfreq, unsigned int updown, unsigned 
 	int i = 0;
 	unsigned int prop_target = 0, zz_target = 0;				// ZZ: proportional freq, system table freq
 	int smooth_up_steps = 0;						// Yank: smooth up steps
-	static int tmp_limit_table_start = 7;					// ff: give an arbitrary level
-	static int tmp_max_scaling_freq_soft = 7;
+	static int tmp_limit_table_start = 0;
+	static int tmp_max_scaling_freq_soft = 0;
+	static int tmp_limit_table_end = 0;
 
 	prop_target = pol_max * load / 100;					// ZZ: prepare proportional target freq
 
@@ -1318,22 +1319,50 @@ static int zz_get_next_freq(unsigned int curfreq, unsigned int updown, unsigned 
 	else
 	    smooth_up_steps = 1;						// Yank: load reached, move by two steps
 
-	tmp_limit_table_start = limit_table_start;
+	tmp_limit_table_start = limit_table_start;				// ZZ: first assign new limits...
+	tmp_limit_table_end = limit_table_end;
 	tmp_max_scaling_freq_soft = max_scaling_freq_soft;
+
+	// ZZ: asc: min freq limit changed
+	if (!freq_table_desc && curfreq
+	    < system_freq_table[min_scaling_freq].frequency)			// ZZ: asc: but reset starting index if current freq is lower than soft/hard min limit otherwise we are
+	    tmp_limit_table_start = 0;						//     shifting out of range and proportional freq is used instead because freq can't be found by loop
+
+	// ZZ: asc: max freq limit changed
+	if (!freq_table_desc && curfreq
+	    > system_freq_table[max_scaling_freq_soft].frequency)		// ZZ: asc: but reset ending index if current freq is higher than soft/hard max limit otherwise we are
+	    tmp_limit_table_end = system_freq_table[freq_table_size].frequency;	//     shifting out of range and proportional freq is used instead because freq can't be found by loop
+
+	// ZZ: desc: max freq limit changed
+	if (freq_table_desc && curfreq
+	    > system_freq_table[limit_table_start].frequency)			// ZZ: desc: but reset starting index if current freq is higher than soft/hard max limit otherwise we are
+	    tmp_limit_table_start = 0;						//     shifting out of range and proportional freq is used instead because freq can't be found by loop
 
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
 	// ff: check to see if we need to override the screen-off limit with the music one
 	if (suspend_flag && dbs_tuners_ins.freq_limit_sleep
 	    && dbs_tuners_ins.freq_limit_sleep < dbs_tuners_ins.music_max_freq
 	    && dbs_tuners_ins.music_state) {
-		tmp_limit_table_start = music_max_freq_step;
-		tmp_max_scaling_freq_soft = music_max_freq_step;
+
+	    tmp_max_scaling_freq_soft = music_max_freq_step;
+
+	    if (!freq_table_desc && curfreq					// ZZ: asc: assign only if current freq is lower or equal soft/hard limit otherwise we are shifting out
+		<= system_freq_table[music_max_freq_step].frequency)		//     of range and proportional freq is used instead because freq can't be found by loop
+		tmp_limit_table_end = system_freq_table[music_max_freq_step].frequency;
+
+	    if (freq_table_desc && curfreq
+		<= system_freq_table[music_max_freq_step].frequency) {		// ZZ: desc: assign only if current freq is lower or equal soft/hard limit otherwise we are shifting out
+		tmp_limit_table_start = music_max_freq_step;			//     of range and proportional freq is used instead because freq can't be found by loop
+	    } else if (freq_table_desc && curfreq
+		> system_freq_table[music_max_freq_step].frequency) {
+		tmp_limit_table_start = 0;
+	    }
 	}
 #endif
 
 	// ZZ: feq search loop with optimization
 	if (freq_table_desc) {
-	    for (i = tmp_limit_table_start; (likely(system_freq_table[i].frequency >= limit_table_end)); i++) {
+	    for (i = tmp_limit_table_start; (likely(system_freq_table[i].frequency >= tmp_limit_table_end)); i++) {
 		if (unlikely(curfreq == system_freq_table[i].frequency)) {	// Yank: we found where we currently are (i)
 		    if (updown == 1) {						// Yank: scale up, but don't go above softlimit
 			zz_target = min(system_freq_table[tmp_max_scaling_freq_soft].frequency,
@@ -1354,12 +1383,11 @@ static int zz_get_next_freq(unsigned int curfreq, unsigned int updown, unsigned 
 			else
 			    return zz_target;					// ZZ: or return the found system table freq as usual
 		    }
-		    return prop_target;						// ZZ: this shouldn't happen but if the freq is not found in system table
-		}								//     fall back to proportional freq target to avoid stuck at current freq
-	    }
-	    return prop_target;							// ZZ: freq not found fallback to proportional freq target
+		}
+	    }									// ZZ: this shouldn't happen but if the freq is not found in system table
+	    return prop_target;							//     fall back to proportional freq target to avoid returning 0
 	} else {
-	    for (i = tmp_limit_table_start; (likely(system_freq_table[i].frequency <= limit_table_end)); i++) {
+	    for (i = tmp_limit_table_start; (likely(system_freq_table[i].frequency <= tmp_limit_table_end)); i++) {
 		if (unlikely(curfreq == system_freq_table[i].frequency)) {	// Yank: we found where we currently are (i)
 		    if (updown == 1) {						// Yank: scale up, but don't go above softlimit
 			zz_target = min(system_freq_table[tmp_max_scaling_freq_soft].frequency,
@@ -1381,10 +1409,9 @@ static int zz_get_next_freq(unsigned int curfreq, unsigned int updown, unsigned 
 			else
 			    return zz_target;					// ZZ: or return the found system table freq as usual
 		    }
-		    return prop_target;						// ZZ: this shouldn't happen but if the freq is not found in system table
-		}								//     fall back to proportional freq target to avoid stuck at current freq
-	    }
-	    return prop_target;							// ZZ: freq not found fallback to proportional freq target
+		}
+	    }									// ZZ: this shouldn't happen but if the freq is not found in system table
+	    return prop_target;							//     fall back to proportional freq target to avoid returning 0
 	}
 }
 
@@ -1598,7 +1625,7 @@ static inline void evaluate_scaling_order_limit_range(bool start, bool limit, bo
 		if (unlikely(max_freq == system_freq_table[i].frequency))
 		    max_scaling_freq_hard = max_scaling_freq_soft = i;		// ZZ: init soft and hard max value
 		if (unlikely(min_freq == system_freq_table[i].frequency))
-		    min_scaling_freq_hard = min_scaling_freq_soft = i;		// ZZ: init soft and hard min value
+		    min_scaling_freq_hard = i;					// ZZ: init hard min value
 		    // Yank: continue looping until table end is reached, we need this to set the table size limit below
 	    }
 
@@ -1620,8 +1647,8 @@ static inline void evaluate_scaling_order_limit_range(bool start, bool limit, bo
 	    } else {
 		freq_table_desc = false;					// Yank: table is in ascending order, lowest freq at the top of the table
 		min_scaling_freq = 0;						// Yank: first valid frequency step (lowest frequency)
-		limit_table_start = min_scaling_freq_soft;			// ZZ: we should use the actual min scaling soft limit value as search start point
-		limit_table_end = system_freq_table[freq_table_size].frequency;	// ZZ: end searching at highest frequency limit
+		limit_table_start = min_scaling_freq_hard;			// ZZ: we should use the actual min scaling soft limit value as search start point
+		limit_table_end = max_freq;					// ZZ: end searching at highest frequency limit
 	    }
 	}
 
@@ -1666,7 +1693,7 @@ static inline void evaluate_scaling_order_limit_range(bool start, bool limit, bo
 		if (freq_table_desc)							// ZZ: if descending ordered table is used
 		    limit_table_start = max_scaling_freq_soft;				// ZZ: we should use the actual scaling soft limit value as search start point
 		else
-		    limit_table_end = system_freq_table[freq_table_size].frequency;	// ZZ: set search end point to max frequency when using ascending table
+		    limit_table_end = system_freq_table[max_scaling_freq_soft].frequency;	// ZZ: set search end point to max frequency when using ascending table
 	    } else {
 		for (i = 0; (likely(system_freq_table[i].frequency != system_table_end)); i++) {
 		    if (unlikely(dbs_tuners_ins.freq_limit == system_freq_table[i].frequency)) {	// Yank: else lookup awake max. frequency index
@@ -1692,7 +1719,7 @@ static inline void evaluate_scaling_order_limit_range(bool start, bool limit, bo
 		if (freq_table_desc)							// ZZ: if descending ordered table is used
 		    limit_table_start = max_scaling_freq_soft;				// ZZ: we should use the actual scaling soft limit value as search start point
 		else
-		    limit_table_end = system_freq_table[freq_table_size].frequency;	// ZZ: set search end point to max freq when using ascending table
+		    limit_table_end = system_freq_table[max_scaling_freq_soft].frequency;	// ZZ: set search end point to max freq when using ascending table
 	    } else {
 		for (i = 0; (likely(system_freq_table[i].frequency != system_table_end)); i++) {
 		    if (unlikely(freq_limit_asleep == system_freq_table[i].frequency)) {	// Yank: else lookup sleep max. frequency index
@@ -1700,7 +1727,7 @@ static inline void evaluate_scaling_order_limit_range(bool start, bool limit, bo
 			if (freq_table_desc)						// ZZ: if descending ordered table is used
 			    limit_table_start = max_scaling_freq_soft;			// ZZ: we should use the actual scaling soft limit value as search start point
 			else
-			    limit_table_end = system_freq_table[i].frequency;		// ZZ: set search end point to max frequency when using ascending table
+			    limit_table_end = system_freq_table[i].frequency;		// ZZ: set search end point to max freq limit when using ascending table
 		    break;
 		    }
 		}
@@ -1715,7 +1742,7 @@ static inline void evaluate_scaling_order_limit_range(bool start, bool limit, bo
 		if (freq_table_desc)							// ZZ: if descending ordered table is used
 		    limit_table_start = max_scaling_freq_soft;				// ZZ: we should use the actual scaling soft limit value as search start point
 		else
-		    limit_table_end = system_freq_table[freq_table_size].frequency;	// ZZ: set search end point to max freq when using ascending table
+		    limit_table_end = system_freq_table[max_scaling_freq_soft].frequency;	// ZZ: set search end point to max freq when using ascending table
 	    } else {
 		for (i = 0; (likely(system_freq_table[i].frequency != system_table_end)); i++) {
 		    if (unlikely(freq_limit_awake == system_freq_table[i].frequency)) {		// Yank: else lookup awake max. frequency index
@@ -4657,7 +4684,8 @@ static ssize_t store_music_state(struct kobject *a, struct attribute *b, const c
 		if (dbs_tuners_ins.music_min_freq && !freq_table_desc) {
 		    for (i = 0; (likely(system_freq_table[i].frequency != system_table_end)); i++) {
 			if (unlikely(system_freq_table[i].frequency == dbs_tuners_ins.music_min_freq)) {
-			    min_scaling_freq_soft = limit_table_start = i;
+			    if (i >= min_scaling_freq_hard)			// ZZ: only if it is higher than current hard limit
+				min_scaling_freq_soft = limit_table_start = i;
 			}
 		    }
 		}
@@ -7405,18 +7433,15 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
 #endif
 }
 
-#if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
 // raise sampling rate to SR*multiplier and adjust sampling rate/thresholds/hotplug/scaling/freq limit/freq step on blank screen
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void __cpuinit _powersave_early_suspend(struct early_suspend *handler)
-#endif
-#endif
-#ifndef WAKE_HOOKS_DEFINED
-#ifndef CONFIG_HAS_EARLYSUSPEND
-void zzmoove_early_suspend(void)
-#endif
+#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(WAKE_HOOKS_DEFINED)
+static void __cpuinit powersave_early_suspend(struct early_suspend *handler)
 #endif
 {
+	if (!freq_table_desc && limit_table_start != 0)				// ZZ: asc: when entering suspend reset freq table start point to full range in case it
+	    limit_table_start = 0;						//     was changed for example because of pol min boosts - this is important otherwise
+										//     freq will stuck at soft limit and wont go below anymore!
+
 	suspend_flag = true;				// ZZ: we want to know if we are at suspend because of things that shouldn't be executed at suspend
 	sampling_rate_awake = dbs_tuners_ins.sampling_rate_current;		// ZZ: save current sampling rate for restore on awake
 	up_threshold_awake = dbs_tuners_ins.up_threshold;			// ZZ: save up threshold for restore on awake
