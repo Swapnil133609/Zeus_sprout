@@ -81,13 +81,13 @@
 #endif
 
 // Yank: enable/disable sysfs interface to display current zzmoove version
-#define ZZMOOVE_VERSION "1.0 beta7"
+#define ZZMOOVE_VERSION "1.0 beta8"
 
 // ZZ: support for 2,4 or 8 cores (this will enable/disable hotplug threshold tuneables and limit hotplug max limit tuneable)
 #define MAX_CORES					(4)
 
 // ZZ: enable/disable hotplug support
-//#define ENABLE_HOTPLUGGING
+#define ENABLE_HOTPLUGGING
 
 // ZZ: enable support for native hotplugging on snapdragon platform
 // #define SNAP_NATIVE_HOTPLUGGING
@@ -150,8 +150,8 @@ static char custom_profile[20] = "custom";			// ZZ: name to show in sysfs if any
 #define DEF_HOTPLUG_IDLE_THRESHOLD			(0)	// ZZ: default hotplug idle threshold
 #define DEF_HOTPLUG_IDLE_FREQ				(0)	// ZZ: default hotplug idle freq
 #define DEF_HOTPLUG_ENGAGE_FREQ				(0)	// ZZ: default hotplug engage freq. the frequency below which we run on only one core (0 = disabled) (ffolkes)
-#define DEF_HOTPLUG_MAX_LIMIT				(0)	// ff: default for hotplug_max_limit. the number of cores we allow to be online (0 = disabled)
-#define DEF_HOTPLUG_MIN_LIMIT				(0)	// ff: default for hotplug_min_limit. the number of cores we require to be online (0 = disabled)
+#define DEF_HOTPLUG_MAX_LIMIT				(4)	// ff: default for hotplug_max_limit. the number of cores we allow to be online (0 = disabled)
+#define DEF_HOTPLUG_MIN_LIMIT				(1)	// ff: default for hotplug_min_limit. the number of cores we require to be online (0 = disabled)
 #define DEF_HOTPLUG_LOCK				(0)	// ff: default for hotplug_lock. the number of cores we require to be online (0 = disabled)
 #endif /* ENABLE_HOTPLUGGING */
 #define DEF_SCALING_BLOCK_THRESHOLD			(0)	// ZZ: default scaling block threshold
@@ -189,6 +189,7 @@ static char custom_profile[20] = "custom";			// ZZ: name to show in sysfs if any
 
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(USE_LCD_NOTIFIER)
 // ZZ: tuneable defaults for early suspend
+#define DEF_DISABLE_SLEEP_MODE				(1)	// ZZ: default for sleep mode switch
 #define MAX_SAMPLING_RATE_SLEEP_MULTIPLIER		(8)	// ZZ: default maximum for sampling rate sleep multiplier
 #define DEF_SAMPLING_RATE_SLEEP_MULTIPLIER		(2)	// ZZ: default sampling rate sleep multiplier
 #define DEF_UP_THRESHOLD_SLEEP				(90)	// ZZ: default up threshold sleep
@@ -201,7 +202,7 @@ static char custom_profile[20] = "custom";			// ZZ: name to show in sysfs if any
 #define DEF_FREQ_LIMIT_SLEEP				(0)	// ZZ: default freq limit sleep
 #ifdef ENABLE_HOTPLUGGING
 #define DEF_DISABLE_HOTPLUG_SLEEP			(0)	// ZZ: default hotplug sleep switch
-#endif /* ENABLE_HOTPLUGGING */
+#endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
 #endif
 
 /*
@@ -547,6 +548,7 @@ static struct dbs_tuners {
 	unsigned int sampling_rate_idle_threshold;		// ZZ: sampling rate switching threshold tuneable
 	unsigned int sampling_rate_idle_delay;			// ZZ: sampling rate switching delay tuneable
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+	unsigned int disable_sleep_mode;
 	unsigned int sampling_rate_sleep_multiplier;		// ZZ: sampling rate sleep multiplier tuneable for early suspend
 #endif
 	unsigned int sampling_down_factor;			// ZZ: sampling down factor tuneable (reactivated)
@@ -702,6 +704,7 @@ static struct dbs_tuners {
 	.sampling_rate_idle_threshold = DEF_SAMPLING_RATE_IDLE_THRESHOLD,
 	.sampling_rate_idle_delay = DEF_SAMPLING_RATE_IDLE_DELAY,
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+	.disable_sleep_mode = DEF_DISABLE_SLEEP_MODE,
 	.sampling_rate_sleep_multiplier = DEF_SAMPLING_RATE_SLEEP_MULTIPLIER,
 #endif
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
@@ -2522,6 +2525,7 @@ show_one(sampling_rate_idle_threshold, sampling_rate_idle_threshold);			// ZZ: s
 show_one(sampling_rate_idle, sampling_rate_idle);					// ZZ: tuneable for sampling rate at idle
 show_one(sampling_rate_idle_delay, sampling_rate_idle_delay);				// ZZ: DSR switching delay tuneable
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+show_one(disable_sleep_mode, disable_sleep_mode);
 show_one(sampling_rate_sleep_multiplier, sampling_rate_sleep_multiplier);		// ZZ: sampling rate multiplier tuneable for early suspend
 #endif
 show_one(sampling_down_factor, sampling_down_factor);					// ZZ: sampling down factor tuneable
@@ -2862,8 +2866,23 @@ static ssize_t store_sampling_rate_idle_delay(struct kobject *a, struct attribut
 	return count;
 }
 
-// ZZ: tuneable -> possible values: 1 to 8, if not set default is 2
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+// ZZ: added tuneable disable_sleep_mode -> possible values: 0 disabled, anything else enabled
+static ssize_t store_disable_sleep_mode(struct kobject *a, struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+
+	if (ret != 1 || input < 0 || suspend_flag) // ZZ: dont set this tuneable during suspend
+	return -EINVAL;
+
+	dbs_tuners_ins.disable_sleep_mode = !!input;
+	return count;
+}
+
+// ZZ: tuneable -> possible values: 1 to 8, if not set default is 2
 static ssize_t store_sampling_rate_sleep_multiplier(struct kobject *a, struct attribute *b, const char *buf, size_t count)
 {
 	unsigned int input;
@@ -5798,6 +5817,7 @@ define_one_global_rw(sampling_rate_idle_threshold);
 define_one_global_rw(sampling_rate_idle);
 define_one_global_rw(sampling_rate_idle_delay);
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+define_one_global_rw(disable_sleep_mode);
 define_one_global_rw(sampling_rate_sleep_multiplier);
 #endif
 define_one_global_rw(sampling_down_factor);
@@ -6140,6 +6160,7 @@ static struct attribute *dbs_attributes[] = {
 	&sampling_rate_idle.attr,
 	&sampling_rate_idle_delay.attr,
 #if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+	&disable_sleep_mode.attr,
 	&sampling_rate_sleep_multiplier.attr,
 #endif
 	&sampling_down_factor.attr,
@@ -7438,11 +7459,14 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
 static void __cpuinit powersave_early_suspend(struct early_suspend *handler)
 #endif
 {
+	if (dbs_tuners_ins.disable_sleep_mode)					// ZZ: exit if sleep mode is disabled
+	    return;
+
 	if (!freq_table_desc && limit_table_start != 0)				// ZZ: asc: when entering suspend reset freq table start point to full range in case it
 	    limit_table_start = 0;						//     was changed for example because of pol min boosts - this is important otherwise
 										//     freq will stuck at soft limit and wont go below anymore!
 
-	suspend_flag = true;				// ZZ: we want to know if we are at suspend because of things that shouldn't be executed at suspend
+	suspend_flag = true;							// ZZ: we want to know if we are at suspend because of things that shouldn't be executed at suspend
 	sampling_rate_awake = dbs_tuners_ins.sampling_rate_current;		// ZZ: save current sampling rate for restore on awake
 	up_threshold_awake = dbs_tuners_ins.up_threshold;			// ZZ: save up threshold for restore on awake
 	down_threshold_awake = dbs_tuners_ins.down_threshold;			// ZZ: save down threhold for restore on awake
@@ -7617,6 +7641,9 @@ void zzmoove_late_resume(void)
 #endif
 #endif
 {
+	if (dbs_tuners_ins.disable_sleep_mode)					// ZZ: exit if sleep mode is disabled
+	    return;
+
 	suspend_flag = false;							// ZZ: we are resuming so reset supend flag
 	scaling_mode_up = 4;							// ZZ: scale up as fast as possibe
 	boost_freq = true;							// ZZ: and boost freq in addition
@@ -7841,7 +7868,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		dbs_timer_init(this_dbs_info);
 #ifndef WAKE_HOOKS_DEFINED
 #ifdef CONFIG_HAS_EARLYSUSPEND
-		register_early_suspend(&_powersave_early_suspend);
+		register_early_suspend(&powersave_early_suspend);
 #endif
 #endif
 		break;
@@ -7878,6 +7905,12 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		    if (!policy->cpu)
 			input_unregister_handler(&interactive_input_handler);
 #endif
+#if (defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND) && !defined(DISABLE_POWER_MANAGEMENT)) || defined(WAKE_HOOKS_DEFINED)
+		    dbs_tuners_ins.disable_sleep_mode = DEF_DISABLE_SLEEP_MODE;
+#endif /* (defined(CONFIG_HAS_EARLYSUSPEND)... */
+#ifdef ENABLE_MUSIC_LIMITS
+		    dbs_tuners_ins.music_state = 0;
+#endif /* ENABLE_MUSIC_LIMITS */
 		    cpufreq_unregister_notifier(
 		    &dbs_cpufreq_notifier_block,
 		    CPUFREQ_TRANSITION_NOTIFIER);
