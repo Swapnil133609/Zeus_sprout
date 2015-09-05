@@ -203,7 +203,6 @@ static long snapshot_ioctl(struct file *filp, unsigned int cmd,
 	if (!mutex_trylock(&pm_mutex))
 		return -EBUSY;
 
-	lock_device_hotplug();
 	data = filp->private_data;
 
 	switch (cmd) {
@@ -376,7 +375,6 @@ static long snapshot_ioctl(struct file *filp, unsigned int cmd,
 
 	}
 
-	unlock_device_hotplug();
 	mutex_unlock(&pm_mutex);
 
 	return error;
