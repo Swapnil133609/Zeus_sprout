@@ -17,9 +17,6 @@
 
 #include "base.h"
 
-static unsigned int cpu_unplug_disable;
-module_param(cpu_unplug_disable, uint, 0644);
-
 #define ONL_CONT_MODE_SYSFS 	0	// core online status controlled by sysfs (mpdecision)
 #define ONL_CONT_MODE_ONLINE 	1	// core is forced online
 #define ONL_CONT_MODE_OFFLINE	2	// core is forced offline 
@@ -69,10 +66,6 @@ static ssize_t __ref store_online(struct device *dev,
 	cpu_hotplug_driver_lock();
 	switch (buf[0]) {
 	case '0':
-		if (cpu_unplug_disable) {
-			ret = -EINVAL;
-			break;
-		}
 		ret = cpu_down(cpuid);
 		if (!ret)
 			kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
