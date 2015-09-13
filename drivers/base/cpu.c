@@ -20,8 +20,14 @@
 #define ONL_CONT_MODE_SYSFS 	0	// core online status controlled by sysfs (mpdecision)
 #define ONL_CONT_MODE_ONLINE 	1	// core is forced online
 #define ONL_CONT_MODE_OFFLINE	2	// core is forced offline 
+#define ONL_CONT_MODE_LOCK4_3	3	// core 4 is forced offline but locked to core 3 (only allowed for core 4 !)
+#define ID_CPU_CORE_3			2	// internal id of CPU core 3
+#define ID_CPU_CORE_4			3	// internal id of CPU core 4
 
-int online_control_mode[4] = {ONL_CONT_MODE_SYSFS, ONL_CONT_MODE_SYSFS, ONL_CONT_MODE_SYSFS, ONL_CONT_MODE_SYSFS};
+int online_control_mode[4] = {ONL_CONT_MODE_SYSFS, 
+							  ONL_CONT_MODE_SYSFS, 
+							  ONL_CONT_MODE_SYSFS, 
+							  ONL_CONT_MODE_SYSFS};
 
 struct bus_type cpu_subsys = {
 	.name = "cpu",
@@ -55,6 +61,7 @@ static ssize_t __ref store_online(struct device *dev,
 				  const char *buf, size_t count)
 {
 	struct cpu *cpu = container_of(dev, struct cpu, dev);
+	struct device *dev3;
 	int cpuid = cpu->dev.id;
 	int from_nid, to_nid;
 	ssize_t ret;
@@ -69,6 +76,15 @@ static ssize_t __ref store_online(struct device *dev,
 		ret = cpu_down(cpuid);
 		if (!ret)
 			kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
+		// handling if core lock4_3 is active for fourth core
+		if ((cpu->dev.id == ID_CPU_CORE_3) && 
+			(online_control_mode[ID_CPU_CORE_4] == ONL_CONT_MODE_LOCK4_3))
+		{
+			dev3 = get_cpu_device(ID_CPU_CORE_4);
+			ret = cpu_down(ID_CPU_CORE_4);
+			if (!ret)
+				kobject_uevent(&dev3->kobj, KOBJ_OFFLINE);
+		}
 		break;
 	case '1':
 		from_nid = cpu_to_node(cpuid);
@@ -84,6 +100,16 @@ static ssize_t __ref store_online(struct device *dev,
 
 		if (!ret)
 			kobject_uevent(&dev->kobj, KOBJ_ONLINE);
+
+		// handling if core lock4_3 is active for fourth core
+		if ((cpu->dev.id == ID_CPU_CORE_3) && 
+			(online_control_mode[3] == ONL_CONT_MODE_LOCK4_3))
+		{
+			dev3 = get_cpu_device(ID_CPU_CORE_4);
+			ret = cpu_up(ID_CPU_CORE_4);
+			if (!ret)
+				kobject_uevent(&dev3->kobj, KOBJ_ONLINE);
+		}
 		break;
 	default:
 		ret = -EINVAL;
@@ -135,18 +161,33 @@ static ssize_t __ref store_online_control(struct device *dev,
 				kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
 			online_control_mode[cpu->dev.id] = ONL_CONT_MODE_SYSFS;
 			break;
+
 		case '1': // forced online
 			ret = cpu_up(cpu->dev.id);
 			if (!ret)
 				kobject_uevent(&dev->kobj, KOBJ_ONLINE);
 			online_control_mode[cpu->dev.id] = ONL_CONT_MODE_ONLINE;
 			break;
+
 		case '2': // forced offline
 			ret = cpu_down(cpu->dev.id);
 			if (!ret)
 				kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
 			online_control_mode[cpu->dev.id] = ONL_CONT_MODE_OFFLINE;
 			break;
+			
+		case '3': // only allowed for CPU core 4 - force offline but lock it to core 3
+			if (cpu->dev.id == ID_CPU_CORE_4)
+			{
+				ret = cpu_down(cpu->dev.id);
+				if (!ret)
+					kobject_uevent(&dev->kobj, KOBJ_OFFLINE);
+				online_control_mode[cpu->dev.id] = ONL_CONT_MODE_LOCK4_3;
+			}
+			else
+				ret = -EINVAL;
+			break;
+			
 		default:
 			ret = -EINVAL;
 	}
