@@ -63,7 +63,7 @@ MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
 /* Tuneables */
-#define t2u_DEBUG		1
+#define t2u_DEBUG		0
 
 
 #define t2u_PWRKEY_DUR		60
