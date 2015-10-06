@@ -38,6 +38,10 @@
 
 #include <linux/hrtimer.h>
 
+#ifdef CONFIG_POCKETMOD
+#include <linux/pocket_mod.h>
+#endif
+
 #pragma GCC optimize ("O0")
 
 
@@ -516,6 +520,9 @@ LCD_STATUS LCD_PowerOn(void)
 		printf("0x%8x\n", INREG32(0x14000110));
         _RestoreLCDRegisters();
         s_isLcdPowerOn = TRUE;
+	#ifdef CONFIG_POCKETMOD
+	is_screen_on = 1;
+	#endif
     }
 
     return LCD_STATUS_OK;
@@ -534,6 +541,9 @@ LCD_STATUS LCD_PowerOff(void)
 		printf("0x%8x\n", INREG32(0x14000110));
 #endif           
         s_isLcdPowerOn = FALSE;
+	#ifdef CONFIG_POCKETMOD
+	is_screen_on = 0;
+	#endif
     }
 
     return LCD_STATUS_OK;
