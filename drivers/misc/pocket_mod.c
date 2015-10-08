@@ -32,6 +32,8 @@
 #include <asm-generic/cputime.h>
 #include <linux/pocket_mod.h>
 
+int is_screen_on;
+
 #ifdef CONFIG_POCKETMOD
 unsigned pocket_mod_switch = 1;
 #else
@@ -85,11 +87,12 @@ static struct attribute_group pocket_mod_group =
 	.attrs  = pocket_mod_attributes,
 };
 
-#ifdef ANDROID_TOUCH_DECLARED
-extern struct kobject *android_touch_kobj;
+#define POCKET_MOD_DECLARED
+#ifdef POCKET_MOD_DECLARED
+extern struct kobject *pocket_mod_kobj;
 #else
-struct kobject *android_touch_kobj;
-EXPORT_SYMBOL_GPL(android_touch_kobj);
+struct kobject *pocket_mod_kobj;
+EXPORT_SYMBOL_GPL(pocket_mod_kobj);
 #endif
 
 static int pocket_mod_init_sysfs(void) {
@@ -97,7 +100,7 @@ static int pocket_mod_init_sysfs(void) {
 	int rc = 0;
 
 	struct kobject *pocket_mod_kobj;
-	pocket_mod_kobj = kobject_create_and_add("pocket_mod", android_touch_kobj);
+	pocket_mod_kobj = kobject_create_and_add("pocket_mod", NULL);
 
 	dev_attr_pocket_mod_enable.attr.name = "enable";
 
