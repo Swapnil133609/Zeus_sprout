@@ -68,7 +68,7 @@ int lz4hc_compress(const unsigned char *src, size_t src_len,
  *		slightly faster than lz4_decompress_unknownoutputsize()
  */
 int lz4_decompress(const unsigned char *src, size_t *src_len,
-	       unsigned char *dest, size_t actual_dest_len);
+		unsigned char *dest, size_t actual_dest_len);
 
 /*
  * lz4_decompress_unknownoutputsize()
@@ -83,5 +83,5 @@ int lz4_decompress(const unsigned char *src, size_t *src_len,
  *	note :  Destination buffer must be already allocated.
  */
 int lz4_decompress_unknownoutputsize(const unsigned char *src, size_t src_len,
-	       unsigned char *dest, size_t *dest_len);
+		unsigned char *dest, size_t *dest_len);
 #endif

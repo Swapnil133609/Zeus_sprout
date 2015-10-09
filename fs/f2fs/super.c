@@ -625,21 +625,49 @@ static int f2fs_show_options(struct seq_file *seq, struct dentry *root)
 #endif
 	if (test_opt(sbi, DISABLE_EXT_IDENTIFY))
 		seq_puts(seq, ",disable_ext_identify");
-	if (test_opt(sbi, INLINE_DATA))
-		seq_puts(seq, ",inline_data");
-	else
-		seq_puts(seq, ",noinline_data");
-	if (test_opt(sbi, INLINE_DENTRY))
-		seq_puts(seq, ",inline_dentry");
-	if (!f2fs_readonly(sbi->sb) && test_opt(sbi, FLUSH_MERGE))
-		seq_puts(seq, ",flush_merge");
-	if (test_opt(sbi, NOBARRIER))
-		seq_puts(seq, ",nobarrier");
-	if (test_opt(sbi, FASTBOOT))
-		seq_puts(seq, ",fastboot");
-	if (test_opt(sbi, EXTENT_CACHE))
-		seq_puts(seq, ",extent_cache");
-	seq_printf(seq, ",active_logs=%u", sbi->active_logs);
+
+	return 0;
+}
+
+static int segment_info_open_fs(struct inode *inode, struct file *file)
+{
+	return single_open(file, segment_info_seq_show, PDE_DATA(inode));
+}
+
+static const struct file_operations f2fs_seq_segment_info_fops = {
+	.owner = THIS_MODULE,
+	.open = segment_info_open_fs,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static int f2fs_remount(struct super_block *sb, int *flags, char *data)
+{
+	struct f2fs_sb_info *sbi = F2FS_SB(sb);
+	struct f2fs_mount_info org_mount_opt;
+	int err, active_logs;
+
+	sync_filesystem(sb);
+
+	/*
+	 * Save the old mount options in case we
+	 * need to restore them.
+	 */
+	org_mount_opt = sbi->mount_opt;
+	active_logs = sbi->active_logs;
+
+	/* parse mount options */
+	err = parse_options(sb, data);
+	if (err)
+		goto restore_opts;
+
+	/*
+	 * Previous and new state of filesystem is RO,
+	 * so no point in checking GC conditions.
+	 */
+	if ((sb->s_flags & MS_RDONLY) && (*flags & MS_RDONLY))
+		goto skip;
 
 	return 0;
 }

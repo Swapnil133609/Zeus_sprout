@@ -1122,7 +1122,7 @@ Bit 31:28 ? {sot_reg, eol_reg, eot_reg, sof} , reg means status record
 Bit 27:24 ?{eot, eol,eot, req}
 Bit 23 : rdy
 
-Rdy should be 1    at idle or end of tile, if not 0, 很可能是mdp 沒回rdy
+Rdy should be 1    at idle or end of tile, if not 0, \AB雈i\AF\E0\ACOmdp \A8S\A6^rdy
 Req  should be 0   at idle or end of tile
 
 sot_reg, eol_reg, eot_reg should be 1  at idle or end of tile
@@ -1133,7 +1133,7 @@ pix count  :  bit 15:0
 
 
 2. 0x4044 / 0x4048 status
-      It is 無須 enable,
+      It is \B5L\B6\B7 enable,
 It is clear by 0x4020[31] write or read clear,
 It has many information on it,
 You can look coda
@@ -4428,6 +4428,7 @@ static long ISP_ioctl(struct file *pFile,MUINT32 Cmd,unsigned long Param)
                 spin_lock_irqsave(&SpinLockCamHaVer, flags);
                 CAM_HAL_VER_IS3 = bIspVer;
                 spin_unlock_irqrestore(&SpinLockCamHaVer, flags);
+                LOG_DBG("SET_ISP_Ver(%d)",bIspVer);
             }
             break;
         }
@@ -5675,9 +5676,6 @@ static MINT32 __init ISP_Init(MVOID)
 
     memset(g_pBuf_kmalloc,0x00,RT_BUF_TBL_NPAGES * PAGE_SIZE);
     //
-    spin_lock_irqsave(&SpinLockCamHaVer, flags);
-    LOG_INF("register isp callback for MDP,is_v3(%d)",CAM_HAL_VER_IS3);
-    spin_unlock_irqrestore(&SpinLockCamHaVer, flags);
     ISP_ControlMdpClock(MTRUE);
 
     // round it up to the page bondary
@@ -5709,9 +5707,6 @@ static MVOID __exit ISP_Exit(MVOID)
 
     platform_driver_unregister(&IspDriver);
     //
-    spin_lock_irqsave(&SpinLockCamHaVer, flags);
-    LOG_INF("unregister isp callback for MDP,is_v3(%d)",CAM_HAL_VER_IS3);
-    spin_unlock_irqrestore(&SpinLockCamHaVer, flags);
     ISP_ControlMdpClock(FALSE);
 
     // unreserve the pages

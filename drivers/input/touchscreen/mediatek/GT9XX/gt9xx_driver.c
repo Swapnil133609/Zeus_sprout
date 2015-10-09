@@ -1778,13 +1778,14 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 	tpd_v_magnify_y = TPD_VELOCITY_CUSTOM_Y;
 
 #endif
-
+	client->ext_flag |= I2C_A_FILTER_MSG;
 	ret = gtp_read_version(client, &version_info);
 
 	if (ret < 0) {
 		GTP_ERROR("Read version failed.");
 		return -EFAULT;
 	}
+	client->ext_flag &= ~I2C_A_FILTER_MSG;
 
 	ret = gtp_init_panel(client);
 
@@ -2212,6 +2213,7 @@ static void tpd_up(s32 x, s32 y, s32 id)
 		}
 	}
 }
+#endif
 
 #if GTP_CHARGER_SWITCH
 static void gtp_charger_switch(s32 dir_update)

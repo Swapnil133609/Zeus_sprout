@@ -15,7 +15,6 @@
  */
 
 #include <crypto/internal/hash.h>
-#include <linux/module.h>
 #include <linux/cryptohash.h>
 #include <linux/types.h>
 #include <linux/string.h>
