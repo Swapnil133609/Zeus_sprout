@@ -56,6 +56,10 @@ static int lz4_uncompress(const char *source, char *dest, int osize)
 	BYTE *cpy;
 	unsigned token;
 	size_t length;
+	size_t dec32table[] = {0, 3, 2, 3, 0, 0, 0, 0};
+#if LZ4_ARCH64
+	size_t dec64table[] = {0, 0, 0, -1, 0, 1, 2, 3};
+#endif
 
 	while (1) {
 

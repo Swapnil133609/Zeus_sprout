@@ -256,10 +256,8 @@ static struct proc_dir_entry *gt91xx_config_proc;
 /*******************************************************
 Function:
     Write refresh rate
-
 Input:
     rate: refresh rate N (Duration=5+N ms, N=0~15)
-
 Output:
     Executive outcomes.0---succeed.
 *******************************************************/
@@ -279,7 +277,6 @@ static u8 gtp_set_refresh_rate(u8 rate)
 /*******************************************************
 Function:
     Get refresh rate
-
 Output:
     Refresh rate or error code
 *******************************************************/
@@ -923,10 +920,8 @@ s32 gtp_i2c_write(struct i2c_client * client, u8 * buf, s32 len)
 /*******************************************************
 Function:
     Send config Function.
-
 Input:
     client: i2c client.
-
 Output:
     Executive outcomes.0--success,non-0--fail.
 *******************************************************/
@@ -981,11 +976,9 @@ static int gtp_send_chr_cfg(struct i2c_client *client)
 /*******************************************************
 Function:
     Read goodix touchscreen version function.
-
 Input:
     client: i2c client struct.
     version:address to store version info
-
 Output:
     Executive outcomes.0---succeed.
 *******************************************************/
@@ -1035,10 +1028,8 @@ s32 gtp_read_version(struct i2c_client * client, u16 * version)
 /*******************************************************
 Function:
     GTP initialize function.
-
 Input:
     client: i2c client private struct.
-
 Output:
     Executive outcomes.0---succeed.
 *******************************************************/
@@ -1316,7 +1307,6 @@ static s8 gtp_i2c_test(struct i2c_client *client)
 /*******************************************************
 Function:
     Set INT pin  as input for FW sync.
-
 Note:
   If the INT is high, It means there is pull up resistor attached on the INT pin.
   Pull low the INT pin manaully for FW sync.
@@ -1768,7 +1758,6 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
 
 /* #ifdef VELOCITY_CUSTOM */
 #if 0
-
 	if ((err = misc_register(&tpd_misc_device))) {
 		printk("mtk_tpd: tpd_misc_device register failed\n");
 	}
@@ -2213,7 +2202,6 @@ static void tpd_up(s32 x, s32 y, s32 id)
 		}
 	}
 }
-#endif
 
 #if GTP_CHARGER_SWITCH
 static void gtp_charger_switch(s32 dir_update)
@@ -2598,7 +2586,6 @@ static int touch_event_handler(void *unused)
 				   input_x =touch_key_point_maping_array[i].point_x;
 				   input_y = touch_key_point_maping_array[i].point_y;
 				   GTP_DEBUG("button =%d %d",input_x,input_y);
-
 				   tpd_down( input_x, input_y, 0, 0);
 				   }
 				 */
@@ -2775,10 +2762,8 @@ static s8 gtp_enter_doze(struct i2c_client *client)
 /*******************************************************
 Function:
     Eter sleep function.
-
 Input:
     client:i2c_client.
-
 Output:
     Executive outcomes.0--success,non-0--fail.
 *******************************************************/
@@ -2863,10 +2848,8 @@ static s8 gtp_enter_sleep(struct i2c_client *client)
 /*******************************************************
 Function:
     Wakeup from sleep mode Function.
-
 Input:
     client:i2c_client.
-
 Output:
     Executive outcomes.0--success,non-0--fail.
 *******************************************************/
