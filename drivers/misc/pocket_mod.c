@@ -46,8 +46,12 @@ int device_is_pocketed(void) {
 		return 0;
 
 	if (!(is_screen_on)) {
-		if (pocket_mod_switch)
-			return pocket_detection_check();
+		if (pocket_mod_switch){
+			if (pocket_detection_check() == 1)
+				return 0;
+			else
+				return 1;
+		}
 	}
 
 	printk(KERN_INFO "%s: screen is on\n", __func__);
