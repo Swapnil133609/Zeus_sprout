@@ -42,10 +42,11 @@
 #include <alsps.h>
 #include <linux/batch.h>
 #include <mach/sensors_ssb.h>
-
+/**
 #ifdef CONFIG_POCKETMOD
 #include <linux/pocket_mod.h>
 #endif
+**/
 /******************************************************************************
  * configuration
 *******************************************************************************/
@@ -604,7 +605,7 @@ static int cm36283_get_als_value(struct cm36283_priv *obj, u16 als)
         }
 
 }
-
+/**
 #ifdef CONFIG_POCKETMOD
 int pocket_detection_check(void)
 {
@@ -614,6 +615,11 @@ int pocket_detection_check(void)
 	struct cm36283_priv *obj = cm36283_obj;
 	
 	if(obj == NULL)
+	{
+		APS_DBG("[CM36283] cm36283_obj is NULL!");
+		return 0;
+	}
+	else
 	{
 		cm36283_enable_ps(obj->client, 1);
 
@@ -637,14 +643,9 @@ int pocket_detection_check(void)
 
 		return (ps_val);
 	}
-	else
-	{
-		APS_DBG("[CM36283] cm36283_obj is NULL!");
-		return 0;
-	}
 }
 #endif
-
+**/
 
 /*-------------------------------attribute file for debugging----------------------------------*/
 
