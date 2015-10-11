@@ -22,6 +22,7 @@ static void alsps_late_resume(struct early_suspend *h);
 
 int als_data_report(struct input_dev *dev, int value, int status)
 {
+    ALSPS_LOG("als_data_report func called");
     //ALSPS_LOG("+als_data_report! %d, %d\n",value,status);
     input_report_rel(dev, EVENT_TYPE_ALS_VALUE, value);
     input_report_rel(dev, EVENT_TYPE_ALS_STATUS, status);
@@ -31,6 +32,7 @@ int als_data_report(struct input_dev *dev, int value, int status)
 
 int ps_data_report(struct input_dev *dev, int value,int status)
 {
+    ALSPS_LOG("ps_data_report func called");
     //ALSPS_LOG("+ps_data_report! %d, %d\n",value,status);
     input_report_rel(dev, EVENT_TYPE_PS_VALUE, (value+1));
     input_report_rel(dev, EVENT_TYPE_PS_STATUS, status);
@@ -40,7 +42,6 @@ int ps_data_report(struct input_dev *dev, int value,int status)
 
 static void als_work_func(struct work_struct *work)
 {
-
     struct alsps_context *cxt = NULL;
     //int out_size;
     //hwm_sensor_data sensor_data;
@@ -49,6 +50,7 @@ static void als_work_func(struct work_struct *work)
     struct timespec time;
     int err;
 
+    ALSPS_LOG("als_work_func func called");
     cxt  = alsps_context_obj;
 
     if(NULL == cxt->als_data.get_data)
@@ -111,7 +113,6 @@ static void als_work_func(struct work_struct *work)
 
 static void ps_work_func(struct work_struct *work)
 {
-
     struct alsps_context *cxt = NULL;
     //int out_size;
     //hwm_sensor_data sensor_data;
@@ -120,6 +121,7 @@ static void ps_work_func(struct work_struct *work)
     struct timespec time;
     int err = 0;
 
+    ALSPS_LOG("ps_work_func func called");
     cxt  = alsps_context_obj;
 
     if(NULL == cxt->ps_data.get_data)
@@ -190,6 +192,7 @@ static void ps_work_func(struct work_struct *work)
 static void als_poll(unsigned long data)
 {
     struct alsps_context *obj = (struct alsps_context *)data;
+    ALSPS_LOG("als_poll func called");
     if((obj != NULL) && (obj->is_als_polling_run))
     {
         schedule_work(&obj->report_als);
@@ -199,6 +202,7 @@ static void als_poll(unsigned long data)
 static void ps_poll(unsigned long data)
 {
     struct alsps_context *obj = (struct alsps_context *)data;
+    ALSPS_LOG("ps_poll func called");
     if(obj != NULL)
     {
         //if(obj->ps_ctl.is_polling_mode)
@@ -211,6 +215,7 @@ static struct alsps_context *alsps_context_alloc_object(void)
 
     struct alsps_context *obj = kzalloc(sizeof(*obj), GFP_KERNEL);
         ALSPS_LOG("alsps_context_alloc_object++++\n");
+    ALSPS_LOG("alsps_context func called");
     if(!obj)
     {
         ALSPS_ERR("Alloc alsps object error!\n");
@@ -248,6 +253,7 @@ static int als_real_enable(int enable)
   int err =0;
   struct alsps_context *cxt = NULL;
   cxt = alsps_context_obj;
+    ALSPS_LOG("als_real_enable func called");
   if(1==enable)
   {
 
@@ -289,6 +295,7 @@ static int als_enable_data(int enable)
     struct alsps_context *cxt = NULL;
     //int err =0;
     cxt = alsps_context_obj;
+    ALSPS_LOG("als_enable_data func called");
     if(NULL  == cxt->als_ctl.open_report_data)
     {
       ALSPS_ERR("no als control path\n");
@@ -337,6 +344,7 @@ static int ps_real_enable(int enable)
   int err =0;
   struct alsps_context *cxt = NULL;
   cxt = alsps_context_obj;
+    ALSPS_LOG("ps_real_enable func called");
   if(1==enable)
   {
 
@@ -378,6 +386,7 @@ static int ps_enable_data(int enable)
     struct alsps_context *cxt = NULL;
     //int err =0;
     cxt = alsps_context_obj;
+    ALSPS_LOG("ps_enable_data func called");
     if(NULL  == cxt->ps_ctl.open_report_data)
     {
       ALSPS_ERR("no ps control path\n");
@@ -431,6 +440,7 @@ static ssize_t als_store_active(struct device* dev, struct device_attribute *att
     mutex_lock(&alsps_context_obj->alsps_op_mutex);
     cxt = alsps_context_obj;
 
+    ALSPS_LOG("als_store_active func called");
     if (!strncmp(buf, "1", 1))
     {
           als_enable_data(1);
@@ -455,6 +465,7 @@ static ssize_t als_show_active(struct device* dev,
     int div = 0;
     cxt = alsps_context_obj;
     div=cxt->als_data.vender_div;
+    ALSPS_LOG("als_show_active func called");
     ALSPS_LOG("als vender_div value: %d\n", div);
     return snprintf(buf, PAGE_SIZE, "%d\n", div);
 }
@@ -470,6 +481,7 @@ static ssize_t als_store_delay(struct device* dev, struct device_attribute *attr
     //int err =0;
     mutex_lock(&alsps_context_obj->alsps_op_mutex);
     cxt = alsps_context_obj;
+    ALSPS_LOG("als_store_delay func called");
     if(NULL == cxt->als_ctl.set_delay)
     {
         ALSPS_LOG("als_ctl set_delay NULL\n");
@@ -499,6 +511,7 @@ static ssize_t als_show_delay(struct device* dev,
                                  struct device_attribute *attr, char *buf)
 {
     int len = 0;
+    ALSPS_LOG("als_show_delay func called");
     ALSPS_LOG(" not support now\n");
     return len;
 }
@@ -509,6 +522,7 @@ static ssize_t als_store_batch(struct device* dev, struct device_attribute *attr
 {
     struct alsps_context *cxt = NULL;
     //int err =0;
+    ALSPS_LOG("als_store_batch func called");
     ALSPS_LOG("als_store_batch buf=%s\n",buf);
     mutex_lock(&alsps_context_obj->alsps_op_mutex);
     cxt = alsps_context_obj;
@@ -537,12 +551,14 @@ static ssize_t als_store_batch(struct device* dev, struct device_attribute *attr
 static ssize_t als_show_batch(struct device* dev,
                                  struct device_attribute *attr, char *buf)
 {
+    ALSPS_LOG("als_show_batch func called");
     return snprintf(buf, PAGE_SIZE, "%d\n", 0);
 }
 
 static ssize_t als_store_flush(struct device* dev, struct device_attribute *attr,
                                   const char *buf, size_t count)
 {
+    ALSPS_LOG("als_store_flush func called");
     //mutex_lock(&alsps_context_obj->alsps_op_mutex);
   //  struct alsps_context *devobj = (struct alsps_context*)dev_get_drvdata(dev);
     //do read FIFO data function and report data immediately
@@ -553,6 +569,7 @@ static ssize_t als_store_flush(struct device* dev, struct device_attribute *attr
 static ssize_t als_show_flush(struct device* dev,
                                  struct device_attribute *attr, char *buf)
 {
+    ALSPS_LOG("als_show_flush func called");
     return snprintf(buf, PAGE_SIZE, "%d\n", 0);
 }
 
@@ -561,6 +578,7 @@ static ssize_t als_show_devnum(struct device* dev,
 {
     const char *devname =NULL;
     devname = dev_name(&alsps_context_obj->idev->dev);
+    ALSPS_LOG("als_show_devnum func called");
     return snprintf(buf, PAGE_SIZE, "%s\n", devname+5);
 }
 static ssize_t ps_store_active(struct device* dev, struct device_attribute *attr,
@@ -572,6 +590,7 @@ static ssize_t ps_store_active(struct device* dev, struct device_attribute *attr
     mutex_lock(&alsps_context_obj->alsps_op_mutex);
     cxt = alsps_context_obj;
 
+    ALSPS_LOG("ps_store_active func called");
     if (!strncmp(buf, "1", 1))
     {
           ps_enable_data(1);
@@ -596,6 +615,7 @@ static ssize_t ps_show_active(struct device* dev,
     int div = 0;
     cxt = alsps_context_obj;
     div=cxt->ps_data.vender_div;
+    ALSPS_LOG("ps_show_active func called");
     ALSPS_LOG("ps vender_div value: %d\n", div);
     return snprintf(buf, PAGE_SIZE, "%d\n", div);
 }
@@ -609,6 +629,7 @@ static ssize_t ps_store_delay(struct device* dev, struct device_attribute *attr,
     struct alsps_context *cxt = NULL;
     mutex_lock(&alsps_context_obj->alsps_op_mutex);
     cxt = alsps_context_obj;
+    ALSPS_LOG("ps_store_delay func called");
     if(NULL == cxt->ps_ctl.set_delay)
     {
         ALSPS_LOG("ps_ctl set_delay NULL\n");
@@ -638,6 +659,7 @@ static ssize_t ps_show_delay(struct device* dev,
                                  struct device_attribute *attr, char *buf)
 {
     int len = 0;
+    ALSPS_LOG("ps_show_delay func called");
     ALSPS_LOG(" not support now\n");
     return len;
 }
@@ -651,6 +673,7 @@ static ssize_t ps_store_batch(struct device* dev, struct device_attribute *attr,
     ALSPS_LOG("ps_store_batch buf=%s\n",buf);
     mutex_lock(&alsps_context_obj->alsps_op_mutex);
     cxt = alsps_context_obj;
+    ALSPS_LOG("ps_store_batch func called");
     if(cxt->ps_ctl.is_support_batch){
         if (!strncmp(buf, "1", 1))
         {
@@ -677,12 +700,14 @@ static ssize_t ps_store_batch(struct device* dev, struct device_attribute *attr,
 static ssize_t ps_show_batch(struct device* dev,
                                  struct device_attribute *attr, char *buf)
 {
+    ALSPS_LOG("ps_show_batch func called");
     return snprintf(buf, PAGE_SIZE, "%d\n", 0);
 }
 
 static ssize_t ps_store_flush(struct device* dev, struct device_attribute *attr,
                                   const char *buf, size_t count)
 {
+    ALSPS_LOG("ps_store_flush func called");
     //mutex_lock(&alsps_context_obj->alsps_op_mutex);
     //struct alsps_context *devobj = (struct alsps_context*)dev_get_drvdata(dev);
     //do read FIFO data function and report data immediately
@@ -693,6 +718,7 @@ static ssize_t ps_store_flush(struct device* dev, struct device_attribute *attr,
 static ssize_t ps_show_flush(struct device* dev,
                                  struct device_attribute *attr, char *buf)
 {
+    ALSPS_LOG("ps_show_flush func called");
     return snprintf(buf, PAGE_SIZE, "%d\n", 0);
 }
 
@@ -701,6 +727,7 @@ static ssize_t ps_show_devnum(struct device* dev,
 {
     const char *devname =NULL;
     devname = dev_name(&alsps_context_obj->idev->dev);
+    ALSPS_LOG("ps_show_devnum");
     return snprintf(buf, PAGE_SIZE, "%s\n", devname+5);
 }
 static int als_ps_remove(struct platform_device *pdev)
@@ -791,6 +818,7 @@ int ps_report_interrupt_data(int value)
     struct alsps_context *cxt = NULL;
     //int err =0;
     cxt = alsps_context_obj;
+    ALSPS_LOG("ps_report_interrupt_data");
     if (cxt->is_get_valid_ps_data_after_enable == false)
     {
         if(ALSPS_INVALID_VALUE != value)
@@ -815,6 +843,7 @@ static int alsps_misc_init(struct alsps_context *cxt)
     int err=0;
     cxt->mdev.minor = MISC_DYNAMIC_MINOR;
     cxt->mdev.name  = ALSPS_MISC_DEV_NAME;
+    ALSPS_LOG("alsps_misc_init func called");
     if((err = misc_register(&cxt->mdev)))
     {
         ALSPS_ERR("unable to register alsps misc device!!\n");
@@ -827,6 +856,7 @@ static int alsps_input_init(struct alsps_context *cxt)
     struct input_dev *dev;
     int err = 0;
 
+    ALSPS_LOG("alsps_input_init func called");
     dev = input_allocate_device();
     if (NULL == dev)
         return -ENOMEM;
@@ -891,6 +921,7 @@ int als_register_data_path(struct als_data_path *data)
     cxt = alsps_context_obj;
     cxt->als_data.get_data = data->get_data;
     cxt->als_data.vender_div = data->vender_div;
+    ALSPS_LOG("als_register_data_path func called");
     ALSPS_LOG("alsps register data path vender_div: %d\n", cxt->als_data.vender_div);
     if(NULL == cxt->als_data.get_data)
     {
@@ -907,6 +938,7 @@ int ps_register_data_path(struct ps_data_path *data)
     cxt = alsps_context_obj;
     cxt->ps_data.get_data = data->get_data;
     cxt->ps_data.vender_div = data->vender_div;
+    ALSPS_LOG("ps_register_data_path func called");
     ALSPS_LOG("alsps register data path vender_div: %d\n", cxt->ps_data.vender_div);
     if(NULL == cxt->ps_data.get_data)
     {
@@ -927,6 +959,7 @@ int als_register_control_path(struct als_control_path *ctl)
     cxt->als_ctl.is_support_batch = ctl->is_support_batch;
     cxt->als_ctl.is_report_input_direct= ctl->is_report_input_direct;
 
+    ALSPS_LOG("als_register_control_path func called");
     if(NULL==cxt->als_ctl.set_delay || NULL==cxt->als_ctl.open_report_data
         || NULL==cxt->als_ctl.enable_nodata)
     {
@@ -948,6 +981,7 @@ int ps_register_control_path(struct ps_control_path *ctl)
     cxt->ps_ctl.is_support_batch = ctl->is_support_batch;
     cxt->ps_ctl.is_report_input_direct= ctl->is_report_input_direct;
 
+    ALSPS_LOG("ps_register_control_path func called");
     if(NULL==cxt->ps_ctl.set_delay || NULL==cxt->ps_ctl.open_report_data
         || NULL==cxt->ps_ctl.enable_nodata)
     {
@@ -980,6 +1014,7 @@ static int alsps_probe(struct platform_device *pdev)
 {
 
     int err;
+    ALSPS_LOG("alsps_probe func called");
     ALSPS_LOG("+++++++++++++alsps_probe!!\n");
 
     alsps_context_obj = alsps_context_alloc_object();
@@ -1033,6 +1068,7 @@ static int alsps_probe(struct platform_device *pdev)
 static int alsps_remove(struct platform_device *pdev)
 {
     int err=0;
+    ALSPS_LOG("alsps_remove func called");
     ALSPS_FUN(f);
     input_unregister_device(alsps_context_obj->idev);
     sysfs_remove_group(&alsps_context_obj->idev->dev.kobj,
