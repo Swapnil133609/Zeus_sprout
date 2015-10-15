@@ -344,7 +344,7 @@ int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		rc = sysfs_create_group(get_governor_parent_kobj(policy),
 					get_sysfs_attr(dbs_data));
 
-		if (rc) {
+		if (rc && rc != -EEXIST) {
 			cdata->exit(dbs_data);
 			kfree(dbs_data);
 			return rc;
@@ -406,9 +406,6 @@ int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		}
 
 		if (!--dbs_data->usage_count) {
-			sysfs_remove_group(get_governor_parent_kobj(policy),
-					   get_sysfs_attr(dbs_data));
-
 			if ((dbs_data->cdata->governor == GOV_CONSERVATIVE) &&
 			    (policy->governor->initialized == 1)) {
 				struct cs_ops *cs_ops = dbs_data->cdata->gov_ops;
