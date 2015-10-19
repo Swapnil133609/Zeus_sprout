@@ -1055,7 +1055,7 @@ int tmd2771_pocket_detection_check(void)
 		// simply add a cputime_t;
 		// if ktime_to_ms - cputime_t < 2*sec { do not prox_check }
 		// else { prox_check }
-		msleep(1);
+		msleep(50);
 
 		ps_val = TMD2771_get_ps_value(obj, obj->ps);
 		als_val = TMD2771_get_als_value(obj, obj->ps);
