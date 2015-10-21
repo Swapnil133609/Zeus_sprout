@@ -61,6 +61,7 @@ modules.builtin
 #
 include/config
 include/linux/version.h
+include/linux/autoconf.h
 include/generated
 arch/*/include/generated
 
