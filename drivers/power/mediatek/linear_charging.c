@@ -120,57 +120,47 @@ PMU_STATUS do_jeita_state_machine_linear(void)
 	BATTERY_VOLTAGE_ENUM cv_voltage;
 
 	previous_g_temp_status = g_temp_status;
-    //JEITA battery temp Standard 
-    if (BMT_status.temperature >= TEMP_POS_60_THRESHOLD) 
-    {
-        battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Over high Temperature(%d) !!\n\r", TEMP_POS_60_THRESHOLD);  
-        g_temp_status = TEMP_ABOVE_POS_60;
-        return PMU_STATUS_FAIL; 
-    }
-    else if(BMT_status.temperature > TEMP_POS_45_THRESHOLD)  
-    {             
-        if((g_temp_status == TEMP_ABOVE_POS_60) && (BMT_status.temperature >= TEMP_POS_60_THRES_MINUS_X_DEGREE))
-        {
-            //battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Temperature between %d and %d,not allow charging yet!!\n\r", TEMP_POS_60_THRES_MINUS_X_DEGREE,TEMP_POS_60_THRESHOLD); 
-            return PMU_STATUS_FAIL; 
-        }
-        else
-        {
-           // battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Temperature between %d and %d !!\n\r", TEMP_POS_45_THRESHOLD,TEMP_POS_60_THRESHOLD); 
-            g_temp_status = TEMP_POS_45_TO_POS_60;
-            g_jeita_recharging_voltage = JEITA_TEMP_POS_45_TO_POS_60_RECHARGE_VOLTAGE;
-            v_cc2topoff_threshold = JEITA_TEMP_POS_45_TO_POS_60_CC2TOPOFF_THRESHOLD;  
-	    charging_full_current = CHARGING_FULL_CURRENT;
-        }
-    }
-    else if(BMT_status.temperature >= TEMP_POS_10_THRESHOLD)  
-    {
-        if( ((g_temp_status == TEMP_POS_45_TO_POS_60) && (BMT_status.temperature >= TEMP_POS_45_THRES_MINUS_X_DEGREE)) ||
-            ((g_temp_status == TEMP_POS_0_TO_POS_10 ) && (BMT_status.temperature <= TEMP_POS_10_THRES_PLUS_X_DEGREE ))    ) 
-        {
-            pr_debug("[BATTERY] Battery Temperature not recovery to normal temperature charging mode yet!!\n\r");     
-        }
-        else
-        {
-           // battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Normal Temperature between %d and %d !!\n\r", TEMP_POS_10_THRESHOLD, TEMP_POS_45_THRESHOLD); 
-                            
-            g_temp_status = TEMP_POS_10_TO_POS_45;
-            #ifdef HIGH_BATTERY_VOLTAGE_SUPPORT
-            g_jeita_recharging_voltage = JEITA_TEMP_POS_10_TO_POS_45_RECHARGE_VOLTAGE;
-            #else
-            g_jeita_recharging_voltage = JEITA_TEMP_POS_10_TO_POS_45_RECHARGE_VOLTAGE;
-            #endif
-            v_cc2topoff_threshold = JEITA_TEMP_POS_10_TO_POS_45_CC2TOPOFF_THRESHOLD;  
-	    charging_full_current = CHARGING_FULL_CURRENT;
-        }
-    }
-    else if(BMT_status.temperature >= TEMP_POS_0_THRESHOLD)  
-    {
-        if((g_temp_status == TEMP_NEG_10_TO_POS_0 || g_temp_status == TEMP_BELOW_NEG_10) && (BMT_status.temperature <= TEMP_POS_0_THRES_PLUS_X_DEGREE))
-        {
-			if (g_temp_status == TEMP_NEG_10_TO_POS_0)
-			{
-            	pr_debug("[BATTERY] Battery Temperature between %d and %d !!\n\r", TEMP_POS_0_THRES_PLUS_X_DEGREE, TEMP_POS_10_THRESHOLD); 
+	/* JEITA battery temp Standard */
+	if (BMT_status.temperature >= t_high_discharge_zone) {
+		battery_xlog_printk(BAT_LOG_CRTI,
+				    "[BATTERY] Battery Over high Temperature(%d) !!\n\r",
+				    t_high_discharge_zone);
+		g_temp_status = TEMP_ABOVE_POS_60;
+		return PMU_STATUS_FAIL;
+	} else if (BMT_status.temperature > t_high_zone) {
+		if ((g_temp_status == TEMP_ABOVE_POS_60)
+		    && (BMT_status.temperature >= t_high_recharge_zone)) {
+			battery_xlog_printk(BAT_LOG_CRTI,
+					    "[BATTERY] Battery Temperature between %d and %d,not allow charging yet!!\n\r",
+					    t_high_recharge_zone,
+					    t_high_discharge_zone);
+			return PMU_STATUS_FAIL;
+		} else {
+			battery_xlog_printk(BAT_LOG_CRTI,
+					    "[BATTERY] Battery Temperature between %d and %d !!\n\r",
+					    t_high_zone, t_high_discharge_zone);
+			g_temp_status = TEMP_POS_45_TO_POS_60;
+			g_jeita_recharging_voltage = v_recharge_pos_45_60;
+			v_cc2cv = cc2cv_pos_45_60;
+			charging_full_current = CHARGING_FULL_CURRENT;
+		}
+	} else if (BMT_status.temperature >= t_middle2low_zone) {
+		if (((g_temp_status == TEMP_POS_45_TO_POS_60)
+		     && (BMT_status.temperature >= t_high2middle_zone))
+		    || ((g_temp_status == TEMP_POS_0_TO_POS_10)
+			&& (BMT_status.temperature <= t_low_zone ))) {
+			battery_xlog_printk(BAT_LOG_CRTI,
+					    "[BATTERY] Battery Temperature not recovery to normal temperature charging mode yet!!\n\r");
+		} else {
+			battery_xlog_printk(BAT_LOG_CRTI,
+					    "[BATTERY] Battery Normal Temperature between %d and %d !!\n\r",
+					    t_middle2low_zone, t_high_zone);
+
+			g_temp_status = TEMP_POS_10_TO_POS_45;
+			if (high_battery_volt_enable == 1) {
+				g_jeita_recharging_voltage = v_recharge_pos_10_45;
+			} else {
+				g_jeita_recharging_voltage = v_recharge_pos_10_45;
 			}
 			
 			v_cc2cv = cc2cv_pos_10_45;
