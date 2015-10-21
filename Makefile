@@ -195,7 +195,7 @@ export KBUILD_BUILDHOST := $(SUBARCH)
 #ARCH		?= $(SUBARCH)
 #CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
 ARCH		?= arm
-CROSS_COMPILE	?= arm-linux-androideabi-
+CROSS_COMPILE	?= /home/swapnil/toolchain/arm-linux-gnueabi-linaro_4.7.4/bin/arm-linux-gnueabi-
 
 # Architecture as present in compile.h
 UTS_MACHINE 	:= $(ARCH)
