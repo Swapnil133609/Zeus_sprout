@@ -118,13 +118,13 @@ static ssize_t pocket_mod_timeout_set(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(pocket_mod_timeout, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(timeout, (S_IWUSR|S_IRUGO),
 		pocket_mod_timeout_show, pocket_mod_timeout_set);
 
 static struct attribute *pocket_mod_attributes[] =
 {
 	&dev_attr_pocket_mod_enable.attr,
-	&dev_attr_pocket_mod_timeout.attr,
+	&dev_attr_timeout.attr,
 	NULL
 };
 
