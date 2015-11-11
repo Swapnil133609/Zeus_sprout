@@ -41,12 +41,21 @@ unsigned pocket_mod_switch = 1;
 unsigned pocket_mod_switch = 0;
 #endif
 
+static unsigned int pocket_mod_timeout = 0;
+static cputime64_t read_time_pre = 0;
+
 int device_is_pocketed(void) {
 
 	if (!(pocket_mod_switch))
 		return 0;
 
 	if (!(is_screen_on)) {
+		if (pocket_mod_timeout) {
+			if ((ktime_to_ms(ktime_get()) - read_time_pre) < pocket_mod_timeout) {
+				return 0;
+			}
+			read_time_pre = ktime_to_ms(ktime_get());
+		}
 		if (pocket_mod_switch){
 			if (alsps_dev == 't')
 			{
@@ -91,9 +100,31 @@ static ssize_t pocket_mod_set(struct device *dev,
 static DEVICE_ATTR(pocket_mod_enable, 0777,
 		pocket_mod_show, pocket_mod_set);
 
+static ssize_t pocket_mod_timeout_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", pocket_mod_timeout);
+}
+
+static ssize_t pocket_mod_timeout_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	unsigned int val = 0;
+
+	if (sscanf(buf, "%u\n", &val) == 1) {
+		pocket_mod_timeout = val;
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR(pocket_mod_timeout, (S_IWUSR|S_IRUGO),
+		pocket_mod_timeout_show, pocket_mod_timeout_set);
+
 static struct attribute *pocket_mod_attributes[] =
 {
 	&dev_attr_pocket_mod_enable.attr,
+	&dev_attr_pocket_mod_timeout.attr,
 	NULL
 };
 
