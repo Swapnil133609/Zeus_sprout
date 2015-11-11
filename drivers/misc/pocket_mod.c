@@ -43,6 +43,7 @@ unsigned pocket_mod_switch = 0;
 
 static unsigned int pocket_mod_timeout = 0;
 static cputime64_t read_time_pre = 0;
+static int prev_res = 0;
 
 int device_is_pocketed(void) {
 
@@ -52,24 +53,30 @@ int device_is_pocketed(void) {
 	if (!(is_screen_on)) {
 		if (pocket_mod_timeout) {
 			if ((ktime_to_ms(ktime_get()) - read_time_pre) < pocket_mod_timeout) {
-				return 0;
+				return prev_res;
 			}
 			read_time_pre = ktime_to_ms(ktime_get());
 		}
 		if (pocket_mod_switch){
 			if (alsps_dev == 't')
 			{
-				if (tmd2771_pocket_detection_check() == 1)
+				if (tmd2771_pocket_detection_check() == 1) {
+					prev_res = 0;				
 					return 0;
-				else
+				} else {
+					prev_res = 1;
 					return 1;
+				}
 			}
 			else if (alsps_dev == 'c')
 			{
-				if (cm36283_pocket_detection_check() == 1)
+				if (cm36283_pocket_detection_check() == 1) {
+					prev_res = 0;
 					return 0;
-				else
+				} else {
+					prev_res = 1;
 					return 1;
+				}
 			}
 		}
 	}
