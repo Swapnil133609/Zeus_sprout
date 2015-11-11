@@ -97,7 +97,7 @@ static ssize_t pocket_mod_set(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(pocket_mod_enable, 0777,
+static DEVICE_ATTR(enable, 0777,
 		pocket_mod_show, pocket_mod_set);
 
 static ssize_t pocket_mod_timeout_show(struct device *dev,
@@ -123,7 +123,7 @@ static DEVICE_ATTR(timeout, (S_IWUSR|S_IRUGO),
 
 static struct attribute *pocket_mod_attributes[] =
 {
-	&dev_attr_pocket_mod_enable.attr,
+	&dev_attr_enable.attr,
 	&dev_attr_timeout.attr,
 	NULL
 };
@@ -147,8 +147,6 @@ static int pocket_mod_init_sysfs(void) {
 
 	struct kobject *pocket_mod_kobj;
 	pocket_mod_kobj = kobject_create_and_add("pocket_mod", NULL);
-
-	dev_attr_pocket_mod_enable.attr.name = "enable";
 
 	rc = sysfs_create_group(pocket_mod_kobj,
 			&pocket_mod_group);
