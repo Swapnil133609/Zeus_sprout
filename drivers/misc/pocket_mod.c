@@ -33,7 +33,7 @@
 #include <linux/pocket_mod.h>
 
 int is_screen_on;
-char alsps_dev;
+char alsps_dev = 0;
 
 #ifdef CONFIG_POCKETMOD
 unsigned pocket_mod_switch = 1;
@@ -45,9 +45,14 @@ static unsigned int pocket_mod_timeout = 0;
 static cputime64_t read_time_pre = 0;
 static int prev_res = 0;
 
+static int (*sensor_check)(void) = NULL;
+
 int device_is_pocketed(void) {
 
 	if (!(pocket_mod_switch))
+		return 0;
+
+	if (sensor_check == NULL)
 		return 0;
 
 	if (!(is_screen_on)) {
@@ -58,25 +63,12 @@ int device_is_pocketed(void) {
 			read_time_pre = ktime_to_ms(ktime_get());
 		}
 		if (pocket_mod_switch){
-			if (alsps_dev == 't')
-			{
-				if (tmd2771_pocket_detection_check() == 1) {
-					prev_res = 0;				
-					return 0;
-				} else {
-					prev_res = 1;
-					return 1;
-				}
-			}
-			else if (alsps_dev == 'c')
-			{
-				if (cm36283_pocket_detection_check() == 1) {
-					prev_res = 0;
-					return 0;
-				} else {
-					prev_res = 1;
-					return 1;
-				}
+			if (sensor_check() == 1) {
+				prev_res = 0;
+				return 0;
+			} else {
+				prev_res = 1;
+				return 1;
 			}
 		}
 	}
@@ -164,4 +156,20 @@ static int pocket_mod_init_sysfs(void) {
 
 }
 
-module_init(pocket_mod_init_sysfs);
+static int pocket_mod_init(void) {
+
+	int rc = 0;
+
+	rc = pocket_mod_init_sysfs();
+
+	if (alsps_dev == 't') {
+		sensor_check = tmd2771_pocket_detection_check;
+	} else if (alsps_dev == 'c') {
+		sensor_check = cm36283_pocket_detection_check;
+	}
+
+	return rc;
+
+}
+
+late_initcall(pocket_mod_init);
