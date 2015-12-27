@@ -285,6 +285,11 @@ config CPU_FREQ_DEFAULT_GOV_SMARTMAX_EPS
         help
           Use the CPUFreq governor 'smartmax eps' as default
 
+config CPU_FREQ_DEFAULT_GOV_THUNDERX
+  bool "thunderx"
+  select CPU_FREQ_GOV_THUNDERX
+  help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -636,6 +641,12 @@ config CPU_FREQ_GOV_SMARTMAX_EPS
         select CPU_FREQ_TABLE
         help
           'smartmax EPS' is the extreme powersaving version of smartmax
+
+config CPU_FREQ_GOV_THUNDERX
+  tristate "'thunderx' cpufreq governor"
+  depends on CPU_FREQ
+  help
+    'thunderx' - a "power optimized" governor for Mediatek SoCs
 
 config GENERIC_CPUFREQ_CPU0
 	tristate "Generic CPU0 cpufreq driver"
