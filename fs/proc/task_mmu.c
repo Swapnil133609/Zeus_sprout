@@ -211,7 +211,6 @@ static void *m_start(struct seq_file *m, loff_t *ppos)
 		return mm;
 	down_read(&mm->mmap_sem);
 
-	down_read(&mm->mmap_sem);
 	hold_task_mempolicy(priv);
 	priv->tail_vma = get_gate_vma(mm);
 
