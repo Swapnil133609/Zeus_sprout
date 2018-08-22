@@ -36,7 +36,7 @@ export ARCH=arm
 export SUBARCH=arm
 export KBUILD_BUILD_USER="Swapnil"
 export KBUILD_BUILD_HOST="AnonymousDesk"
-export CROSS_COMPILE=/home/swapnil/UBERTC-arm-eabi-6.0-97cef52bb0b9/bin/arm-eabi-
+export CROSS_COMPILE=/home/swapnil/UBERTC/bin/arm-eabi-
 
 # Compilation Scripts Are Below
 compile_kernel ()
